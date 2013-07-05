@@ -8,20 +8,6 @@ There are two stages:
 
 More details in Rigby and Robillard ICSE 2013.
 
-==NOTES==
-
-* ACE is designed for parsing code snippets and freeform text not entire source code files
-** Scope rules are expanded to include documentation untis, etc
-* ACE includes elements from stacktraces
-
-== Special Cases ==
-* Ignore: System.* (e.g., System.out.println)
-* Ignore: Default annotation (e.g., @Override)
-
-==Input and Output==
-* ACE takes plain ascii text files
-* ACE outputs creates a number of tables, with table clt storing the code elements in each document
-
 ==Required Perl Libraries==
 
 *use DBI; #postgres
@@ -35,11 +21,13 @@ More details in Rigby and Robillard ICSE 2013.
 
 ==Run==
 
+* As Input ACE can take any plaintext document, it can also process the stackoverflow db in postgres format
+
 * See the example config file, you'll need to setup the db etc
 ** src/example.conf
 
 * resolve.sh will run all the appropriate perl and sql scripts 
-** ./resolve.sh <db_name> <config_file>
+** <pre> ./resolve.sh <db_name> <config_file> </pre>
 
 * There are a few checks you can perform afterwards in src/checks.sql
 
@@ -54,10 +42,22 @@ More details in Rigby and Robillard ICSE 2013.
 * simple = the name of the code element (variables are not code elements and are only used as intermediaries)
 * trust = only want trust = 0, anything higher has been rejected
 
+
+==NOTES==
+
+* ACE is designed for parsing code snippets and freeform text not entire source code files
+** Scope rules are expanded to include documentation untis, etc
+* ACE includes elements from stacktraces
+
+== Special Cases ==
+* Ignore: System.* (e.g., System.out.println)
+* Ignore: Default annotation (e.g., @Override)
+
 ==What do the trust values mean?==
 
 If you just include code elements with trust 0, you'll be fine, if you want to know where things came from then you can look at the trust_original values:
 
+<pre>
 0 -> naturally good: qualified or defined or a new Constructor()
 1-> variable and member, but variable is unresolved
 2-> method undefined
@@ -70,6 +70,7 @@ If you just include code elements with trust 0, you'll be fine, if you want to k
 9-> ambigious package name
 10-> annotation or annotation_package
 11-> non-compound second round (may not be processed)
+</pre>
 
 === CE Context===
 
@@ -99,6 +100,3 @@ results_salience.sql
 **if processing is not present in the config files, normal code element extraction will occur
 ** ./resolve.pl <config file> first 
 *TODO: ambigious terms that are resolved in another part of the doc will not be highlighted earler. For example a class called Intent may not get it's position reported.
-
-
-
