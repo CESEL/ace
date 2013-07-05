@@ -1,0 +1,92 @@
+=ACE -- Automated Code Element Extractor=
+
+ACE resolves code-like terms to their corresponding code element kind
+
+There are two stages:
+# Find code elements that are unambiguous 
+# Second: Based on index of unambiguous code elements find those that are ambiguous and try to resolve them to an unambiguous type
+
+More details in Rigby and Robillard ICSE 2013.
+
+==NOTES==
+
+* this is for parsing code snippets and freeform text not source code files
+* we include elements from stacktraces
+
+== SPECIAL CASES ==
+-Ignore: System.* (e.g., System.out.println)
+-Ignore: Default annotation (e.g., @Override)
+
+==Input and Output==
+-IN: TODO, take standard input ... Need to pass in unique id as well 
+-IN: StackOverflow posts
+-OUT: puts results in a database: use create.sql
+
+CONFIG FILE:
+-See fields in example.conf
+--TODO -- what are the different options?
+--READ config file in sh
+
+==Required Perl Libraries==
+
+To run resolve.pl -- You are going to need:
+*use DBI;
+*use Cwd;
+*use Regexp::Common; 
+*use IO::File;
+*use Config::General;
+
+STEPS:
+The steps for the resolver are in resolve.sh: after you run it try this query:
+--du must be globally unique
+-If you don't have a date or a post order you can use resolve_thread_freq.pl
+--select kind, trust, count(*) from clt group by kind, trust order by kind, count(*) desc;
+-After a re-run check (need to create table ce and clt _old before re-run
+--select c.du, c.pqn, c.simple, c.kind, o.du, o.pqn, o.simple, o.kind from clt c full outer join clt_old o on (c.du = o.du and c.pqn = o.pqn and c.simple = o.simple and c.kind = o.kind) where c.du is null or o.du is null order by c.du, o.du;
+
+
+trust_original values:
+0 -> naturally good: qualified or defined or a new Constructor()
+1-> variable and member, but variable is unresolved
+2-> method undefined
+3-> type undefined
+4-> chain of methods, can have undefined type 
+5-> field undefined
+6-> declaration of constructor, method, class
+7-> second pass from dictionary
+8-> stacktrace
+9-> ambigious package name
+10-> annotation or annotation_package
+11-> non-compound second round (may not be processed)
+
+CONTEXT:
+--if you're interested in finding out which context something came from see context.sql
+
+MOTIVATION
+--See results_motivation.sql  
+
+VALIDATION:
+-- Special cases -> results_compound_types.sql
+-- See benchmark.sql -> dumps current bench_good.csv and creates a new bench.csv for analysis, also fills out the benchmark table
+
+-- results_ace_tables.sql -> ace result tables including precision and recall
+
+SALIENCE:
+
+results_salience.sql
+- need to run tf_idf.sql first
+- in benchmark how many ces are salient?
+- extract attributes including tfidf and dump to arff 
+- add the arff header -> arff_header.arff
+
+NLP:
+
+-update the conf file adding the following: processing=nlp
+--if processing is not present in the config files, normal code element extraction will occur
+-- ./resolve.pl <config file> first 
+-TODO: ambigious terms that are resolved in another part of the doc will not be highlighted earler. For example a class called Intent may not get it's position reported.
+
+-alternatively you can dump to a file or db the following:
+--select tid, du, pqn, simple, kind from clt where trust = 0 and kind <> 'variable';
+
+
