@@ -8,8 +8,8 @@ date
 psql $1 -f create.sql
 
 #The first pass, getting the valid code elements
-echo "./resolve.pl $2 first > $1_resolve1.out"
-./resolve.pl $2 first > $1_resolve1.out
+echo "./resolve.pl $2 first > /tmp/$1_resolve1.out"
+./resolve.pl $2 first > /tmp/$1_resolve1.out
 date
 
 #should make some indexes for variable resolution
@@ -27,8 +27,8 @@ psql $1 -f dict_ce.sql
 date
 
 #find the ambiguous code elements that match a term in our collection-wide dictionary
-echo "./resolve.pl $2 second > $1_resolve2.out"
-./resolve.pl $2 second > $1_resolve2.out
+echo "./resolve.pl $2 second > /tmp/$1_resolve2.out"
+./resolve.pl $2 second > /tmp/$1_resolve2.out
 date
 
 #vacuum and analyze and create indexes
@@ -60,7 +60,7 @@ date
 
 
 #Includes unresolved two camel classes, but must exclude classes that have same name as project
-echo "run FINAL.SQL including your own list of \"bad words\""
+echo "run final.sql including your own list of \"bad words\""
 #psql $1 -f final.sql
 #date
 

@@ -1,35 +1,28 @@
 =ACE - Automated Code Element Extractor=
 
-ACE resolves code-like terms to their corresponding code element kind
+ACE extracts code elements (classes, methods, fields, etc) found in freeform ASCII text documents. It does not require any apriori knowledge of the code elements, but does require a large corpus of documents. The island parser is java based.
 
 There are two stages:
-# Find code elements that are unambiguous 
-# Based on index of unambiguous code elements find those that are ambiguous and try to resolve them to an unambiguous type
+# Find code elements that are unambiguous and build a index of valid ce in the document corpus
+# Find ambiguous code elemetns, and use the index to resolve them to their declaring type
 
 More details in Rigby and Robillard ICSE 2013.
 
-==Required Perl Libraries==
+==Required Libraries==
 
-*use DBI; #postgres
-*use Cwd;
-*use Regexp::Common; 
-*use IO::File;
-*use Config::General;
-
-*To install, for example,
-** apt-get install libConfig-General-perl
+* sudo apt-get install postgresql libConfig-General-perl libIO-File-perl libRegexp-Common-perl libdbd-pg-perl
 
 ==Run==
 
-* As Input ACE can take any plaintext document, it can also process the stackoverflow db in postgres format
+* As Input ACE can take any plaintext document, it can also process stackoverflow db in postgres format
 
-* See the example config file, you'll need to setup the db etc
+* See the example config file
 ** src/example.conf
 
 * resolve.sh will run all the appropriate perl and sql scripts 
-** <pre> ./resolve.sh <db_name> <config_file> </pre>
+** <pre> ./resolve.sh db_name config_file 2> project_name/project.error | tee project_name/project.out </pre>
 
-* There are a few checks you can perform afterwards in src/checks.sql
+* certain two camel words are are not valid classes and are project specific. Add these terms to src/final.sql (e.g., HttpClient is both a class and a project)
 
 ==The Output==
 *Just dump the clt table (Code Like Term) to a file
@@ -74,7 +67,7 @@ If you just include code elements with trust 0, you'll be fine, if you want to k
 
 === CE Context===
 
-* if you're interested in finding out which context something came from see context.sql
+* if you're interested in finding out which context a CE came from see context.sql
 
 == MOTIVATION ==
 See results_motivation.sql  
@@ -82,8 +75,9 @@ See results_motivation.sql
 == Manual Validation ==
 
 Here are some scripts to do manual validation:
+* There are a few checks you can perform afterwards in src/post_analysis/checks.sql
 * Special cases -> results_compound_types.sql
-* See benchmark.sql -> dumps current bench_good.csv and creates a new bench.csv for analysis, also fills out the benchmark table
+* See benchmark/benchmark.sql -> dumps current bench_good.csv and creates a new bench.csv for analysis, also fills out the benchmark table
 * results_ace_tables.sql -> ace result tables including precision and recall
 
 == Salience ==
@@ -99,4 +93,4 @@ results_salience.sql
 *update the conf file adding the following: processing=nlp
 **if processing is not present in the config files, normal code element extraction will occur
 ** ./resolve.pl <config file> first 
-*TODO: ambigious terms that are resolved in another part of the doc will not be highlighted earler. For example a class called Intent may not get it's position reported.
+*TODO: ambigious terms that are resolved in another part of the doc will not be highlighted earler.
