@@ -1206,10 +1206,8 @@ if($config{doc_type} eq 'test') {
 #for regenerating the text to dump into nlp pipeline
 elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 
-    # my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid = 3668958 order by parentid, p.creationdate asc]);
-    my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u, (select du from benchmark group by du) b where owneruserid = u.id and b.du::integer = p.id order by parentid, p.creationdate asc]);
-    #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc limit 100]);
-
+    my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date from posts p where p.id in (select id from posts where tags ~ E\'$config{tags}\') or parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
+    
     my $get_pos_len = $dbh_ref->prepare(qq{select pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and du = ?  order by pos});
 
     $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
@@ -1267,10 +1265,10 @@ elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 #For stackoverflow
 elsif($config{doc_type} eq 'stackoverflow') {
 
-    #create table limited_posts as select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E'applet' and tags ~ E'java') order by parentid, p.creationdate asc;
-    #my $get_du = $dbh_ref->prepare(q{select * from limited_posts order by  parentid, msg_date asc});     
+    #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
 
-    my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
+    #instead of old query above which modifies stackoverflow tables, we put two coniditons in where clause, because stackoverflow doesn't store the parentid for question posts
+    my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date from posts p where p.id in (select id from posts where tags ~ E\'$config{tags}\') or parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
 
     $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
 
