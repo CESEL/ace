@@ -24,8 +24,8 @@ More details in Rigby and Robillard ICSE 2013.
 
 * certain two camel words are are not valid classes and are project specific. Add these terms to src/final.sql (e.g., HttpClient is both a class and a project)
 
-* if you're going to run more than one project/tag through ACE in the same db
-** src/rename_tables.sql 
+* if you're going to run more than one project/tag through ACE in the same db,
+** you'll need to modify: src/rename_tables.sql 
 
 ==The Output==
 *Just dump the clt table (Code Like Term) to a file

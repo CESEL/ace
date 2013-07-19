@@ -15,7 +15,7 @@ create table ce (
     primary key(pqn, simple, kind)
 );
 
-drop index ce_simple_idx;
+drop index if exists ce_simple_idx;
 create index ce_simple_idx on ce(simple);
 
 --CE has to occur in > 1 thread, have trust < 2 (TODO, why)
