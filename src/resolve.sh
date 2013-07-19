@@ -58,9 +58,9 @@ echo "./thread.pl $2"
 #./thread_freq.pl $2
 date
 
+echo "cleans up the db"
+psql $1 -f final.sql
+date
 
-#Includes unresolved two camel classes, but must exclude classes that have same name as project
-echo "run final.sql including your own list of \"bad words\""
-#psql $1 -f final.sql
-#date
+echo "you may want to run project specific quiries to include two camel classes, see src/project_specific/<project-name.sql>"
 

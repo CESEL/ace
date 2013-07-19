@@ -22,7 +22,8 @@ More details in Rigby and Robillard ICSE 2013.
 * resolve.sh will run all the appropriate perl and sql scripts 
 ** <pre> ./resolve.sh db_name config_file 2> project_name/project.error | tee project_name/project.out </pre>
 
-* certain two camel words are are not valid classes and are project specific. Add these terms to src/final.sql (e.g., HttpClient is both a class and a project)
+* certain two camel words are are not valid classes and are project specific. (e.g., HttpClient is both a class and a project)
+** Add these terms to src/project_specific/<project_name>.sql 
 
 * if you're going to run more than one project/tag through ACE in the same db,
 ** you'll need to modify: src/rename_tables.sql 
