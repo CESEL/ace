@@ -1206,8 +1206,13 @@ if($config{doc_type} eq 'test') {
 #for regenerating the text to dump into nlp pipeline
 elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 
-    my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date from posts p where p.id in (select id from posts where tags ~ E\'$config{tags}\') or parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
-    
+    my $get_du = $dbh_ref->prepare(qq[
+                  select parentid, id, title, body, msg_date from                                                                                                                                                              
+                  (select id as parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts where id in (select id from posts where tags ~ E'lucene') --the parents                                                                
+                  union select parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts where parentid in (select id from posts where tags ~ E'lucene')) as r --the children                                                    
+                  order by parentid, msg_date asc
+                  ]);
+
     my $get_pos_len = $dbh_ref->prepare(qq{select pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and du = ?  order by pos});
 
     $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
@@ -1267,8 +1272,13 @@ elsif($config{doc_type} eq 'stackoverflow') {
 
     #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
 
-    #instead of old query above which modifies stackoverflow tables, we put two coniditons in where clause, because stackoverflow doesn't store the parentid for question posts
-    my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date from posts p where p.id in (select id from posts where tags ~ E\'$config{tags}\') or parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
+    #instead of old query above which modifies stackoverflow tables, we union the parents and the children (parents don't have a parentid) 
+    my $get_du = $dbh_ref->prepare(qq[
+                  select parentid, id, title, body, msg_date from                                                                                                                                                              
+                  (select id as parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts where id in (select id from posts where tags ~ E'lucene') --the parents                                                                
+                  union select parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts where parentid in (select id from posts where tags ~ E'lucene')) as r --the children                                                    
+                  order by parentid, msg_date asc
+                  ]);
 
     $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
 

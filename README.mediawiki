@@ -66,6 +66,7 @@ If you just include code elements with trust 0, you'll be fine, if you want to k
 9-> ambigious package name
 10-> annotation or annotation_package
 11-> non-compound second round (may not be processed)
+12-> project specific badness
 </pre>
 
 === CE Context===
