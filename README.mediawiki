@@ -1,7 +1,7 @@
 =ACE - Automated Code Element Extractor=
 
 ACE extracts code elements (classes, methods, fields, etc) found in freeform ASCII text documents. It does not require any apriori knowledge of the code elements, but does require a large corpus of documents. The island parser is java based. ACE is based on heuristics and is NOT intended to be a re-implementation of the Java Spec. Since the tool is Java dependent, you must ensure that the docs you are passing it don't contain other languages that look like Java (e.g., C#).
-
+ 
 There are two stages:
 # Find code elements that are unambiguous and build a index of valid ce in the document corpus
 # Find ambiguous code elements, and use the index to resolve them to their declaring type
