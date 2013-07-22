@@ -1,0 +1,26 @@
+==Steps==
+# Run benchmark.sql (add an essential and valid columns to the output file)
+# Validate code elements and record fp and fn
+## Would it break the parser? Record it in record in ../limits.mediawiki 
+# Read over whole post
+# Describe in a sentence which CEs are essential and how they are being used
+# Based on sentence classify CEs as essential
+
+Notes
+*If a CE is private (e.g., a method created by the poster) and it is not fully defined in that post, we ignore it because there's no way of knowing its declaring type
+*a property is not a code element 
+*variables and local fields are excluded
+*a variable that is unresolved is equivalent to an undef
+
+Codes for column valid (must end in fp or fn) -- all left blank are considered tp or if pqn is undefined, then tn
+*ufn -> undefined but valid, but impossible to get class name (used to be uv)
+*vfn -> variable listed, but trust = 1
+*sfn -> spelling or capitalization issue
+*sfp -> stacktrace false positive
+*1fn -> not in ce dict
+*bfp -> bad word like add, query, etc
+*xfp -> included from XML, but said we're excluding xml?
+*gfn -> generic caused a false negative
+*lfp -> another language
+*ignore -> private code element that doesn't have full definition in post
+

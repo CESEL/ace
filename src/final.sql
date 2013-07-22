@@ -1,4 +1,4 @@
-
+\set ECHO all
 
 VACUUM clt;
 ANALYZE clt;

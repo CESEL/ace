@@ -1,6 +1,6 @@
 =ACE - Automated Code Element Extractor=
 
-ACE extracts code elements (classes, methods, fields, etc) found in freeform ASCII text documents. It does not require any apriori knowledge of the code elements, but does require a large corpus of documents. The island parser is java based.
+ACE extracts code elements (classes, methods, fields, etc) found in freeform ASCII text documents. It does not require any apriori knowledge of the code elements, but does require a large corpus of documents. The island parser is java based. ACE is based on hieristics and is NOT intended to be a re-implementation of the Java Spec.
 
 There are two stages:
 # Find code elements that are unambiguous and build a index of valid ce in the document corpus
@@ -14,7 +14,7 @@ More details in Rigby and Robillard ICSE 2013.
 
 ==Run==
 
-* As Input ACE can take any plaintext document, it can also process stackoverflow db in postgres format
+* As Input ACE takes the stackoverflow db in postgres format (it can handle any plaintext file, but currently there is no way to feed it raw plaintext documents)
 
 * See the example config file
 ** src/example.conf
@@ -23,7 +23,7 @@ More details in Rigby and Robillard ICSE 2013.
 ** <pre> ./resolve.sh db_name config_file 2> project_name/project.error | tee project_name/project.out </pre>
 
 * certain two camel words are are not valid classes and are project specific. (e.g., HttpClient is both a class and a project)
-** Add these terms to src/project_specific/<project_name>.sql 
+** Too fix these terms add them to src/project_specific/<project_name>.sql 
 
 * if you're going to run more than one project/tag through ACE in the same db,
 ** you'll need to modify: src/rename_tables.sql 
@@ -49,6 +49,22 @@ More details in Rigby and Robillard ICSE 2013.
 == Special Cases ==
 * Ignore: System.* (e.g., System.out.println)
 * Ignore: Default annotation (e.g., @Override)
+* more details in src/limits.mediawiki
+
+== Manual Validation ==
+
+Here are some scripts to do manual validation:
+* See src/benchmark/README.mediawili
+** benchmark.sql -> dumps current bench_good.csv and creates a new bench.csv for analysis, also fills out the benchmark table
+* results_ace_tables.sql -> ace result tables including precision and recall
+*Note: If a CE is private (e.g., a method created by the poster) and it is not fully defined in that post, we ignore it because there's no way of knowing its declaring type
+
+== Further NLP parsing (experimental) ==
+
+*update the conf file adding the following: processing=nlp
+**if processing is not present in the config files, normal code element extraction will occur
+** ./resolve.pl <config file> first 
+*Note: Terms that remain ambigious will not be highlighted, even if the term is identified later on in the document. This is to avoid terms that are very common. For example if url.get() is identified in a document, we could go back and highlight every instance of the word 'get', which would be silly. 
 
 ==What do the trust values mean?==
 
@@ -70,32 +86,4 @@ If you just include code elements with trust 0, you'll be fine, if you want to k
 12-> project specific badness
 </pre>
 
-=== CE Context===
 
-* if you're interested in finding out which context a CE came from see context.sql
-
-== MOTIVATION ==
-See results_motivation.sql  
-
-== Manual Validation ==
-
-Here are some scripts to do manual validation:
-* There are a few checks you can perform afterwards in src/post_analysis/checks.sql
-* Special cases -> results_compound_types.sql
-* See benchmark/benchmark.sql -> dumps current bench_good.csv and creates a new bench.csv for analysis, also fills out the benchmark table
-* results_ace_tables.sql -> ace result tables including precision and recall
-
-== Salience ==
-
-results_salience.sql
-* need to run tf_idf.sql first
-* in benchmark how many ces are salient?
-* extract attributes including tfidf and dump to arff 
-* add the arff header -> arff_header.arff
-
-== Further NLP parsing ==
-
-*update the conf file adding the following: processing=nlp
-**if processing is not present in the config files, normal code element extraction will occur
-** ./resolve.pl <config file> first 
-*TODO: ambigious terms that are resolved in another part of the doc will not be highlighted earler.
