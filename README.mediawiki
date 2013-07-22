@@ -1,10 +1,10 @@
 =ACE - Automated Code Element Extractor=
 
-ACE extracts code elements (classes, methods, fields, etc) found in freeform ASCII text documents. It does not require any apriori knowledge of the code elements, but does require a large corpus of documents. The island parser is java based. ACE is based on hieristics and is NOT intended to be a re-implementation of the Java Spec.
+ACE extracts code elements (classes, methods, fields, etc) found in freeform ASCII text documents. It does not require any apriori knowledge of the code elements, but does require a large corpus of documents. The island parser is java based. ACE is based on heuristics and is NOT intended to be a re-implementation of the Java Spec. Since the tool is Java dependent, you must ensure that the docs you are passing it don't contain other languages that look like Java (e.g., C#).
 
 There are two stages:
 # Find code elements that are unambiguous and build a index of valid ce in the document corpus
-# Find ambiguous code elemetns, and use the index to resolve them to their declaring type
+# Find ambiguous code elements, and use the index to resolve them to their declaring type
 
 More details in Rigby and Robillard ICSE 2013.
 
@@ -43,7 +43,7 @@ More details in Rigby and Robillard ICSE 2013.
 ==NOTES==
 
 * ACE is designed for parsing code snippets and freeform text not entire source code files
-** Scope rules are expanded to include documentation untis, etc
+** Scope rules are expanded to include documentation units, etc
 * ACE includes elements from stacktraces
 
 == Special Cases ==
@@ -54,7 +54,7 @@ More details in Rigby and Robillard ICSE 2013.
 == Manual Validation ==
 
 Here are some scripts to do manual validation:
-* See src/benchmark/README.mediawili
+* See src/benchmark/README.mediawiki
 ** benchmark.sql -> dumps current bench_good.csv and creates a new bench.csv for analysis, also fills out the benchmark table
 * results_ace_tables.sql -> ace result tables including precision and recall
 *Note: If a CE is private (e.g., a method created by the poster) and it is not fully defined in that post, we ignore it because there's no way of knowing its declaring type
@@ -64,7 +64,7 @@ Here are some scripts to do manual validation:
 *update the conf file adding the following: processing=nlp
 **if processing is not present in the config files, normal code element extraction will occur
 ** ./resolve.pl <config file> first 
-*Note: Terms that remain ambigious will not be highlighted, even if the term is identified later on in the document. This is to avoid terms that are very common. For example if url.get() is identified in a document, we could go back and highlight every instance of the word 'get', which would be silly. 
+*Note: Terms that remain ambiguous will not be highlighted, even if the term is identified later on in the document. This is to avoid terms that are very common. For example if url.get() is identified in a document, we could go back and highlight every instance of the word 'get', which would be silly. 
 
 ==What do the trust values mean?==
 
