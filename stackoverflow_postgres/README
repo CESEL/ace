@@ -1,0 +1,23 @@
+From: http://meta.stackoverflow.com/a/29062/174301
+
+C++ (SQLite3, PostgreSQL)
+
+Source: http://tejp.de/dev/src/soimport/
+Requirements: libexpat, libsqlite3 or libpqxx
+Binary (Linux x64, Ubuntu): http://tejp.de/files/so/dbimport/soimport-r11_x64.tar.gz
+Binary (Linux i386, Debian): http://tejp.de/files/so/dbimport/soimport-r11_i386.tar.gz
+Tested with the 2009-11-01, 2009-12-01, 2010-01-01 dumps of the trilogy.
+
+Columns containing numeric values are converted to numbers, columns containing dates are converted to Unix timestamps and stored as numbers. Optionally indexes are added for all numeric columns. The import takes about 5-10 minutes for the pure data and about 10 minutes more if generating indexes.
+
+Usage
+
+To generate a SQLite database, start the sqliteimport program in a directory containing the data dumps XML files and it creates a dump.db in the same directory. If you don't want indexes (creating them takes some time), start the program with sqliteimport -I.
+
+PostgreSQL support is still a little bit experimental. To generate a PostgreSQL database, start the pgcopyimport program in a directory containing the data dumps XML files. Pass a -c flag with the necessary database information, like pgcopyimport -c "dbname=sodump user=so password=abc". The database needs to exist. Warning: This program creates big temporary files in /var/tmp, about as big as the single XML files. This is done to quickly load the data into the database with COPY FROM. The the temporary files are named badges.pgdata,...
+
+If you don't want to create temporary files use the pgimport program instead, but this will be a lot slower. PostgreSQL import also skips the generation of indexes if the -I flag is added.
+
+Other uses
+
+The design should also be fairly flexible if you want to extract special data from the XML files, parse different XML files, or create something else than a SQLite/PostgreSQL database from the input.

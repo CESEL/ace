@@ -1,0 +1,22 @@
+
+Dump the output of ACE to a csv file and ordering by position
+* benchmark.sql
+
+For each code element: stackoverflow.com/questions/<du>
+# Determine if the code element is a tp, fp, fn, tn
+## A code element is a tn if the pqn = '!undef!' and the simple is not a valid code element
+## A fp, if we identify the element, but it is not a true code element
+## A fn, if we don't identify a valid code element, unless:
+### If a CE is private (e.g., a method created by the poster) and it is not fully defined in that post, we ignore it because there's no way of knowing its declaring type
+### a property is not a code element 
+
+* tid = The thread id or question id
+* du = the document unit or post id
+* pqn = the partially qualified name (we don't resolve all the way back to packages)
+* kind = the type, method, field, package, annotation, etc
+* simple = the name of the code element (variables are not code elements and are only used as intermediaries)
+* trust = only want trust = 0, anything higher has been rejected
+* pos = the position in the file
+* valid = fn, fp, tn (blank = tp)
+
+
