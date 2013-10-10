@@ -1273,15 +1273,15 @@ elsif($config{doc_type} eq 'stackoverflow') {
     #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
 
     #instead of old query above which modifies stackoverflow tables, we union the parents and the children (parents don't have a parentid) 
-    my $get_du = $dbh_ref->prepare(qq[
+    my $q = qq[
                   select parentid, id, title, body, msg_date from                                                                                                                                                              
                   (select id as parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts 
-                    where id in (select id from posts where tags ~ E'lucene') --the parents                                                                
+                    where id in (select id from posts where tags ~ E\'$config{tags}\') --the parents (or questions)                                                        
                   union select parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts 
-                    where parentid in (select id from posts where tags ~ E'lucene') --the children                                                    
+                    where parentid in (select id from posts where E\'$config{tags}\') --the children (answers)                                                   
                     ) as r 
                   order by parentid, msg_date asc
-                  ]);
+                  ];
 
 #    #lucene is implemented in all kinds of languages, so need complex regexp
 #    my $q = q[

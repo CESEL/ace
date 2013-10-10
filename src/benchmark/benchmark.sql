@@ -26,10 +26,11 @@ update benchmark set valid = 'fn' where trust = '-1' and valid <> 'fn';
 
 --get next X -- include du <> tid if you want to exclude questions
 -- from clt where du <> tid 
-copy(select simple, pqn, count(*) as cnt, kind, min(pos) as min_pos, trust, tid, du from clt where trust <> 7 and du in (select du from (select du from clt group by du except select du from benchmark group by du) as r order by random() limit 200) group by tid, du, pqn, simple, kind, trust order by du, min(pos)) to '/tmp/bench.csv' with csv header;
+copy(select simple, pqn, count(*) as cnt, kind, min(pos) as min_pos, trust, tid, du from clt where trust <> 7 and du in (select du from (select du from clt where du <> tid group by du except select du from benchmark group by du) as r order by random() limit 200) group by tid, du, pqn, simple, kind, trust order by du, min(pos)) to '/tmp/bench.csv' with csv header;
 
 --get a copy of the current benchmark as csv
 copy(select * from benchmark order by du, min_pos) to '/tmp/bench_copy.csv' with csv header;
+
 
 --another check
 --select b.du, b.simple, b.pqn, b.kind, c.du, c.simple, c.pqn, c.kind from benchmark b full outer join (select du, simple, pqn, kind from clt where trust <> 7 and du in (select du from benchmark group by du) group by du, simple, pqn, kind) c on (c.du = b.du and c.simple = b.simple and c.pqn = b.pqn and c.kind = b.kind) where c.du is null or b.du is null order by b.du, c.du
