@@ -2,14 +2,12 @@
 
 use warnings;
 use strict;
-
 use DBI;
 use Cwd;
 use Regexp::Common; 
-
 use IO::File;
-
 use Config::General;
+
 
 #if we leave the html in it could get confused with a generic
 #random flags to start and end code snippets (KLUDGE: will mess up position!): could remove it before processing
@@ -165,6 +163,7 @@ sub meth_vars($$$$$) {
     }
 
 }
+no warnings;
 
 sub parse($$$$$$$) {
 
@@ -214,7 +213,7 @@ sub parse($$$$$$$) {
                 $var_to_class{$va} = $cl;
 
                 #class
-                $insert_simple->execute($is_snippet, $tid, $du, $cl, $cl, 'type', 0, $clp);
+                # $insert_simple->execute($is_snippet, $tid, $du, $cl, $cl, 'type', 0, $clp);
                 #variable
                 $insert_simple->execute($is_snippet, $tid, $du, $cl, $va, 'variable', 0, $vap);
 
@@ -1268,11 +1267,16 @@ elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 }
 
 # run resolve to create a summary
+
 elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow') {
 
-    my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du = '1001953' order by du, pos});
+
+
+    my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' order by du, pos limit 10000});
 
     my $get_du = $dbh_ref->prepare(q[select parentid, id, title, body from posts where id = ?]);
+
+    my $insert_summary = $dbh_ref->prepare(q[insert into summary (du, pos, pqn, simple, word, distance, ngram) values (?,?,?,?,?,?,?)]);
 
     $get_pos_len->execute or die;
 
@@ -1289,28 +1293,108 @@ elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow')
             my($tid, $du, $title, $content) = $get_du ->fetchrow_array;
 
             if(defined $title) {
-                $content = $title . ' ' . $content;
+                
+		$content = $title . ' ' . $content;
             } 
 
-            #print "\n\nprocessing du = $du\n";
-            $sc = strip_html($content);
+           #print "\n\nprocessing du = $du\n";
+            
+	    $sc = strip_html($content);
 
-            #get rid of code or non-code
-            print "$sc\n\n";
+           #get rid of code or non-code
+		
+           print "$sc\n\n";
 
+
+# these will change the position!
+#            $sc =~ s/[\d\$#@~!&*\[\];,?^`{}]+//g;
+#	    $sc =~ s#\([^)]*\)##g;
+#            $sc =~ s#\<?[^)]*\?>##g;
+#	    $sc =~ s#\<[^)]*\/>##g;
+#	    $sc =~ s#\</[^)]*\>##g;
+
+	    $sc =~ s/[^A-Za-z0-9_-]/ /g;
+#	    $sc =~ tr|=| |;
+#	    $sc =~ tr|:| |;
+#            $sc =~ tr|"| |;
+#	    $sc =~ tr|//| |;
+#	    $sc =~ tr|/| |;
+
+#	    Part of identifier names
+#	    $sc =~ tr|_| |;
+#	    $sc =~ tr|-| |;
+#	    $sc =~ tr|.| |;    
+
+	   # print "$sc\n\n";
         }
 
 
-        pos($sc) = $pos;  
+	print "Code Element:  "; 
+	
+        print "$pqn.$simple  ===> ";
 
+        print "First Summary:  ";
 
-        print "\n$pqn.$simple\n";
-        #if ($sc =~ m/$START_CODE/ or $sc =~ s/$END_CODE/)
-        if ($sc =~ m|\G $simple\s* ((.*? [. ]+){1,3})|gcxms) {
-            # if ($sc =~ m|\G (\w+)|gcxms) {
-            print "$pqn.$simple $1\n";
-        }
-    }
+	my $where =  $pos;
+
+	 my $begin = substr $sc, 0, $where;
+
+	 my $end = substr $sc, $where; 
+ 
+         my $param_length_sum=10;
+        
+	 my @values2 = split(/\s+/, $end);
+
+	 my @values1 = split(/\s+/, $begin);
+
+	 my $size=scalar(@values1);
+
+         my $sizArr=$size-1;
+
+         my $sizDep=$size-$param_length_sum;
+
+	 my @TAB2 = @values2[1..$param_length_sum];
+
+	 my @TAB1 = @values1[$sizDep..$sizArr];
+          
+         no warnings;
+
+	my $build;
+	my $ngram = 2;
+
+	print "BEFORE: ";
+	for (my $i = 0; $i <= @TAB1 - $ngram; $i ++) {
+
+	   my $val = $TAB1[$i];
+	   $val =~ s/\s+/ /g;
+           print "$val ";
+	   $build .= "$val ";
+
+	
+	   if ($i != 0 and $i % $ngram == 0) {
+		$insert_summary->execute($du, $pos, $pqn, $simple, $build, $i, $ngram) or die;
+		$build = '';
+	   }
+         #}
+	}
+
+	print "AFTER: ";
+	for (my $i = 0; $i <= @TAB2 - $ngram; $i ++) {
+
+	   my $val = $TAB2[$i];
+	   $val =~ s/\s+/ /g;
+           print "$val ";
+	   $build .= "$val ";
+	
+	   if ($i != 0 and $i % $ngram == 0) {
+
+		$insert_summary->execute($du, $pos, $pqn, $simple, $build, $i, $ngram) or die;
+		$build = '';
+	   }
+	}
+
+	 print "\n";
+}
 
 }
 
