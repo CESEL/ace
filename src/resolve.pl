@@ -1,7 +1,8 @@
 #!/usr/bin/perl -w
 
 use warnings;
-use strict;
+use Text::Ngrams;
+#use strict;
 use DBI;
 use Cwd;
 use Regexp::Common; 
@@ -1050,6 +1051,8 @@ sub parse_sec($$$) {
 
 
 
+
+
 #tags from http://www.w3schools.com/tags/default.asp
 my $html = '\!\-\-|\!DOCTYPE|a|abbr|acronym|address|applet|area|b|base|basefont|bdo|big|blockquote|body|br|button|caption|center|cite|col|colgroup|dd|del|dfn|dir|div|dl|dt|em|fieldset|font|form|frame|frameset|head|h[1-6]|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|map|menu|meta|noframes|noscript|object|ol|optgroup|option|p|param|q|s|samp|script|select|small|span|strike|strong|style|sub|sup|table|tbody|td|textarea|tfoot|th|thead|title|tr|tt|u|ul|var|pre|code';
 
@@ -1272,13 +1275,14 @@ elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow')
 
 
 
-    my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' order by du, pos limit 10000});
+    my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du='1001953' order by du, pos limit 100});
 
     my $get_du = $dbh_ref->prepare(q[select parentid, id, title, body from posts where id = ?]);
 
-    my $insert_summary = $dbh_ref->prepare(q[insert into summary (du, pos, pqn, simple, word, distance, ngram) values (?,?,?,?,?,?,?)]);
-
     $get_pos_len->execute or die;
+
+    my $pre_du;
+    my $sc;
 
     my $pre_du;
     my $sc;
@@ -1297,108 +1301,165 @@ elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow')
 		$content = $title . ' ' . $content;
             } 
 
-           #print "\n\nprocessing du = $du\n";
+            #print "\n\nprocessing du = $du\n";
             
 	    $sc = strip_html($content);
 
-           #get rid of code or non-code
+            #get rid of code or non-code
+
+	    print "StackOverflow post content:\n";
 		
-           print "$sc\n\n";
+            print "$sc\n\n";
 
-
-# these will change the position!
-#            $sc =~ s/[\d\$#@~!&*\[\];,?^`{}]+//g;
-#	    $sc =~ s#\([^)]*\)##g;
-#            $sc =~ s#\<?[^)]*\?>##g;
-#	    $sc =~ s#\<[^)]*\/>##g;
-#	    $sc =~ s#\</[^)]*\>##g;
-
-	    $sc =~ s/[^A-Za-z0-9_-]/ /g;
-#	    $sc =~ tr|=| |;
-#	    $sc =~ tr|:| |;
-#            $sc =~ tr|"| |;
-#	    $sc =~ tr|//| |;
-#	    $sc =~ tr|/| |;
-
-#	    Part of identifier names
-#	    $sc =~ tr|_| |;
-#	    $sc =~ tr|-| |;
-#	    $sc =~ tr|.| |;    
-
-	   # print "$sc\n\n";
         }
 
 
-	print "Code Element:  "; 
+	pos($sc) = $pos;
+
+        my $char = substr( $sc, pos($sc)-1 , 1 );
+
+	#print "Discard CE embedded in html or xml tags :\n";
+
+    	if($char ne '<' &&  $char ne '/'){
+
+	print "Code Element:";
 	
-        print "$pqn.$simple  ===> ";
+        print "$pqn.$simple:\n ";
 
-        print "First Summary:  ";
+        #print "Context of the post (text before and after CE) :\n";
 
-	my $where =  $pos;
+	my $contextBefore  = substr $sc,0 , pos($sc);
 
-	 my $begin = substr $sc, 0, $where;
+	$contextBefore  =~ s/\h+/ /g;
+	
+        #print $contextBefore;
 
-	 my $end = substr $sc, $where; 
- 
-         my $param_length_sum=10;
-        
-	 my @values2 = split(/\s+/, $end);
+	print "\n";
 
-	 my @values1 = split(/\s+/, $begin);
+	my $contextAfter  = substr $sc, pos($sc), length($sc)-1;
+	 
+        $contextAfter  =~ s/\h+/ /g;
 
-	 my $size=scalar(@values1);
+	#print $contextAfter;
 
-         my $sizArr=$size-1;
+  
+        #Filter Contexts (Befor and After CE) and then Remove Stop Words (will rewrite them in sub-routines...)
 
-         my $sizDep=$size-$param_length_sum;
+	#print "Filter Context Before:\n";
 
-	 my @TAB2 = @values2[1..$param_length_sum];
+	$contextBefore =~ s/[\d\$#@~!&*\[\];,?^`{}]+//g;
 
-	 my @TAB1 = @values1[$sizDep..$sizArr];
-          
-         no warnings;
+	$contextBefore =~ s/<[^>]*\>//g;
 
-	my $build;
-	my $ngram = 2;
+	$contextBefore =~ tr|=| |;
+	$contextBefore =~ tr|:| |;
+        $contextBefore =~ tr|"| |;
+	$contextBefore =~ tr|//| |;
+	$contextBefore =~ tr|/| |;
+	#$contextBefore =~ tr|>| |;
+	#$contextBefore =~ tr|<| |;
+	$contextBefore =~ s/\h+/ /g;
+	
+	#print "Filter Context After:\n";
 
-	print "BEFORE: ";
-	for (my $i = 0; $i <= @TAB1 - $ngram; $i ++) {
+	$contextAfter =~ s/[\d\$#@~!&*\[\];,?^`{}]+//g;
 
-	   my $val = $TAB1[$i];
-	   $val =~ s/\s+/ /g;
-           print "$val ";
-	   $build .= "$val ";
+	$contextAfter =~ s/<[^>]*\>//g;
+
+	$contextAfter =~ tr|=| |;
+	$contextAfter =~ tr|:| |;
+        $contextAfter =~ tr|"| |;
+	$contextAfter =~ tr|//| |;
+	$contextAfter =~ tr|/| |;
+	#$contextAfter =~ tr|>| |;
+	#$contextAfter =~ tr|<| |;
+	$contextAfter =~ s/\h+/ /g;
+
+	print "\n";
+
+	my @contextBeforeList= split(' ', $contextBefore);
+
+	my @contextAfterList= split(' ', $contextAfter);
+
+  	my @rev=reverse(@contextBeforeList); 
+
+	my $lenContext=35;
+
+	print "Context After CE :\n";
+
+ 	print my $limContextAfter = join (" ", @contextAfterList[0..$lenContext]);
+
+	print "\n";
+
+	print "Context Before CE :\n";
+
+  	print my $limContextBefore = join (" ", reverse(@rev[0..$lenContext]));
+	
+	print "\n";
+	
+	print "Context surrounding CE :\n";
+
+	print my $context=$limContextBefore .' '. $limContextAfter;
+
+	print "\n";
+
+        #Remove stop words, augmented EN Stops Words with Java keywords as well to avoid noise.
+      
+	use Lingua::StopWords qw( getStopWords );
+
+	my $stopwords = getStopWords('en');
+  
+        my @words=split(' ', $context);   
+
+	#print "Removal of stop words";
+
+	my $scalarText= join ' ', grep { !$stopwords->{$_} } @words;
+
+        # Context filtered and without keywords (will add filtering of CE for the accuracy of corpus and thus N-grams) :\n";
+
+	print "Context surrounding CE filtered (filt-1) and without stop words :\n";
+
+	$scalarText =~ s/\h+/ /g;
+      
+        print $scalarText;
+	
+	print "\n";
+
+
+	# Generate N-grams for the context and by n most frequent, normalized word n-grams :
+
+        print "N-Grams Extraction :\n";
+
+	my $ngramSize=3;
+
+        my $ngramsOrderCrit='frequency';
+
+	my $onlyfirst=4;
+
+        my $normalizeFreq=1;
+
+        my $onlyMostFreqNg=1;
+
+    
+
+	my $ng = Text::Ngrams->new( windowsize => $ngramSize,type => word);
+
+	$ng->process_text($scalarText);
+		  
+        print $ng->to_string( orderby=>$ngramsOrderCrit, onlyfirst=>$onlyfirst, normalize=>$normalizeFreq, spartan=>$normalizeFreq);    
+
+	print "\n";
+
+
+	# At this step we will have the algorithm for generating summaries using the generated n-grams.
+
 
 	
-	   if ($i != 0 and $i % $ngram == 0) {
-		$insert_summary->execute($du, $pos, $pqn, $simple, $build, $i, $ngram) or die;
-		$build = '';
-	   }
-         #}
-	}
-
-	print "AFTER: ";
-	for (my $i = 0; $i <= @TAB2 - $ngram; $i ++) {
-
-	   my $val = $TAB2[$i];
-	   $val =~ s/\s+/ /g;
-           print "$val ";
-	   $build .= "$val ";
-	
-	   if ($i != 0 and $i % $ngram == 0) {
-
-		$insert_summary->execute($du, $pos, $pqn, $simple, $build, $i, $ngram) or die;
-		$build = '';
-	   }
-	}
-
-	 print "\n";
 }
 
 }
 
-
+}
 
 #
 #For stackoverflow
