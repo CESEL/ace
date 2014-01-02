@@ -1446,7 +1446,7 @@ elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow')
 
 	$ng->process_text($scalarText);
 		  
-        print $ng->to_string( orderby=>$ngramsOrderCrit, onlyfirst=>$onlyfirst, normalize=>$normalizeFreq, spartan=>$onlyMostFreqNg);    
+        print $ng->to_string( orderby=>$ngramsOrderCrit, onlyfirst=>$onlyfirst, normalize=>$normalizeFreq, spartan=>$normalizeFreq);    
 
 	print "\n";
 
