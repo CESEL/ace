@@ -70,12 +70,6 @@ Here are some scripts to do manual validation:
 
 If you just include code elements with trust 0, you'll be fine, if you want to know where things came from then you can look at the trust_original values:
 
-==Summaries==
-
-* make sure you config file has processing=summary
-* summary/run create_summary.sql 
-* ./resolve.pl config first
-
 <pre>
 0 -> naturally good: qualified or defined or a new Constructor()
 1-> variable and member, but variable is unresolved
@@ -91,4 +85,5 @@ If you just include code elements with trust 0, you'll be fine, if you want to k
 11-> non-compound second round (may not be processed)
 12-> project specific badness
 </pre>
+
 
