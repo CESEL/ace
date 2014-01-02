@@ -1266,56 +1266,6 @@ elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
     }
     $get_du->finish;
 }
-
-# run resolve to create a summary
-elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow') {
-
-    my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du = '1001953' order by du, pos});
-
-    my $get_du = $dbh_ref->prepare(q[select parentid, id, title, body from posts where id = ?]);
-
-    $get_pos_len->execute or die;
-
-    my $pre_du;
-    my $sc;
-    while ( my($du, $pqn, $simple, $kind, $pos, $len) = $get_pos_len->fetchrow_array) {
-
-        if (!defined $pre_du or $pre_du ne $du) {
-
-            $pre_du = $du;
-
-            $get_du->execute($du) or die "Can't get doc units from db ", $dbh_ref->errstr;
-
-            my($tid, $du, $title, $content) = $get_du ->fetchrow_array;
-
-            if(defined $title) {
-                $content = $title . ' ' . $content;
-            } 
-
-            #print "\n\nprocessing du = $du\n";
-            $sc = strip_html($content);
-
-            #get rid of code or non-code
-            print "$sc\n\n";
-
-        }
-
-
-        pos($sc) = $pos;  
-
-
-        print "\n$pqn.$simple\n";
-        #if ($sc =~ m/$START_CODE/ or $sc =~ s/$END_CODE/)
-        if ($sc =~ m|\G $simple\s* ((.*? [. ]+){1,3})|gcxms) {
-            # if ($sc =~ m|\G (\w+)|gcxms) {
-            print "$pqn.$simple $1\n";
-        }
-    }
-
-}
-
-
-
 #
 #For stackoverflow
 elsif($config{doc_type} eq 'stackoverflow') {
