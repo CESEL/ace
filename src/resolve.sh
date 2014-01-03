@@ -7,6 +7,9 @@ date
 #creating the clt table
 psql $1 -f create.sql
 
+#get rid of indexes before inserts 
+psql $1 -f drop_indexes.sql
+
 #The first pass, getting the valid code elements
 echo "./resolve.pl $2 first > /tmp/$1_resolve1.out"
 ./resolve.pl $2 first > /tmp/$1_resolve1.out

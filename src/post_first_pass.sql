@@ -17,10 +17,10 @@ create table clt_backup as select * from clt;
 --delete from clt where pqn ~ E'_$' or simple  ~ E'_$';
 
 --want to know where it came from
-alter table clt add column trust_original integer;
-update clt set trust_original = trust;
-alter table clt add column kind_original text;
-update clt set kind_original = kind;
+--alter table clt add column trust_original integer;
+update clt set trust_original = trust where trust_original is null;
+--alter table clt add column kind_original text;
+update clt set kind_original = kind where kind_original is null;
 
 --all SQL updates in here have the power to add new ce to the gold standard
 

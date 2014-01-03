@@ -11,10 +11,9 @@ create table clt (
     pos int, -- location in the text where the code element occurs
     snip boolean, --is it part of a code snippet?
     reason text --verbose trust/how a code element was resolved
+    trust_original integer; --originally how trustworthy the CE is (see README for values)
+    kind_original text; -- we turn constructors into types, this is the original kind value
+    context integer default 1; --groupings of reasons see context.sql
 );
 
---don't want any indexes, we're doing massive inserts
-drop index if exists du_idx;
-drop index if exists simple_idx;
-drop index if exists tid_idx;
 
