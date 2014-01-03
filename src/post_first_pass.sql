@@ -10,8 +10,8 @@ update clt set simple = '.*', trust = 0 from (select pqn, count(distinct(simple)
 delete from clt where trust = 9;
 
 --not a bad idea if you are experimenting
-drop table if exists clt_backup;
-create table clt_backup as select * from clt;
+--drop table if exists clt_backup;
+--create table clt_backup as select * from clt;
 
 --in hibernate variable names in sql end in _
 --delete from clt where pqn ~ E'_$' or simple  ~ E'_$';

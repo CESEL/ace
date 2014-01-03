@@ -9,6 +9,9 @@ use Regexp::Common;
 
 use IO::File;
 
+use File::Find::Rule;
+use File::Slurp;
+
 use Config::General;
 
 #if we leave the html in it could get confused with a generic
@@ -1265,6 +1268,31 @@ elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 
     }
     $get_du->finish;
+}
+#
+#From plaintext documents
+elsif($config{doc_type} eq 'plain') {
+
+    my $files_obj = File::Find::Rule->file()
+                                 ->start($config{dir});
+
+    while (my $file = $files_obj->match() ) {
+
+        #print "$file\n";
+        if ($file =~ m|\Q$config{ignore_path}\E/*(.*?)([^/]+)$|) {
+            my $tid = $1;
+            my $du = $2;
+
+            print "\n\nprocessing: dir or tid = $tid file or du = $du\n";
+            my $content = read_file($file);
+            process($tid, $du, strip_html($content));
+        }
+
+
+        last;
+
+    }
+
 }
 #
 #For stackoverflow
