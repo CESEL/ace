@@ -1,14 +1,15 @@
 #!/usr/bin/perl -w
 
 use warnings;
-use Text::Ngrams;
-#use strict;
+use strict;
+
 use DBI;
 use Cwd;
 use Regexp::Common; 
-use IO::File;
-use Config::General;
 
+use IO::File;
+
+use Config::General;
 
 #if we leave the html in it could get confused with a generic
 #random flags to start and end code snippets (KLUDGE: will mess up position!): could remove it before processing
@@ -164,7 +165,6 @@ sub meth_vars($$$$$) {
     }
 
 }
-no warnings;
 
 sub parse($$$$$$$) {
 
@@ -214,7 +214,7 @@ sub parse($$$$$$$) {
                 $var_to_class{$va} = $cl;
 
                 #class
-                # $insert_simple->execute($is_snippet, $tid, $du, $cl, $cl, 'type', 0, $clp);
+                $insert_simple->execute($is_snippet, $tid, $du, $cl, $cl, 'type', 0, $clp);
                 #variable
                 $insert_simple->execute($is_snippet, $tid, $du, $cl, $va, 'variable', 0, $vap);
 
@@ -1051,8 +1051,6 @@ sub parse_sec($$$) {
 
 
 
-
-
 #tags from http://www.w3schools.com/tags/default.asp
 my $html = '\!\-\-|\!DOCTYPE|a|abbr|acronym|address|applet|area|b|base|basefont|bdo|big|blockquote|body|br|button|caption|center|cite|col|colgroup|dd|del|dfn|dir|div|dl|dt|em|fieldset|font|form|frame|frameset|head|h[1-6]|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|map|menu|meta|noframes|noscript|object|ol|optgroup|option|p|param|q|s|samp|script|select|small|span|strike|strong|style|sub|sup|table|tbody|td|textarea|tfoot|th|thead|title|tr|tt|u|ul|var|pre|code';
 
@@ -1268,199 +1266,6 @@ elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
     }
     $get_du->finish;
 }
-
-# run resolve to create a summary
-
-elsif($config{processing} eq 'summary' and $config{doc_type} eq 'stackoverflow') {
-
-
-
-    my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du='1001953' order by du, pos limit 100});
-
-    my $get_du = $dbh_ref->prepare(q[select parentid, id, title, body from posts where id = ?]);
-
-    $get_pos_len->execute or die;
-
-    my $pre_du;
-    my $sc;
-
-    my $pre_du;
-    my $sc;
-    while ( my($du, $pqn, $simple, $kind, $pos, $len) = $get_pos_len->fetchrow_array) {
-
-        if (!defined $pre_du or $pre_du ne $du) {
-
-            $pre_du = $du;
-
-            $get_du->execute($du) or die "Can't get doc units from db ", $dbh_ref->errstr;
-
-            my($tid, $du, $title, $content) = $get_du ->fetchrow_array;
-
-            if(defined $title) {
-                
-		$content = $title . ' ' . $content;
-            } 
-
-            #print "\n\nprocessing du = $du\n";
-            
-	    $sc = strip_html($content);
-
-            #get rid of code or non-code
-
-	    print "StackOverflow post content:\n";
-		
-            print "$sc\n\n";
-
-        }
-
-
-	pos($sc) = $pos;
-
-        my $char = substr( $sc, pos($sc)-1 , 1 );
-
-	#print "Discard CE embedded in html or xml tags :\n";
-
-    	if($char ne '<' &&  $char ne '/'){
-
-	print "Code Element:";
-	
-        print "$pqn.$simple:\n ";
-
-        #print "Context of the post (text before and after CE) :\n";
-
-	my $contextBefore  = substr $sc,0 , pos($sc);
-
-	$contextBefore  =~ s/\h+/ /g;
-	
-        #print $contextBefore;
-
-	print "\n";
-
-	my $contextAfter  = substr $sc, pos($sc), length($sc)-1;
-	 
-        $contextAfter  =~ s/\h+/ /g;
-
-	#print $contextAfter;
-
-  
-        #Filter Contexts (Befor and After CE) and then Remove Stop Words (will rewrite them in sub-routines...)
-
-	#print "Filter Context Before:\n";
-
-	$contextBefore =~ s/[\d\$#@~!&*\[\];,?^`{}]+//g;
-
-	$contextBefore =~ s/<[^>]*\>//g;
-
-	$contextBefore =~ tr|=| |;
-	$contextBefore =~ tr|:| |;
-        $contextBefore =~ tr|"| |;
-	$contextBefore =~ tr|//| |;
-	$contextBefore =~ tr|/| |;
-	#$contextBefore =~ tr|>| |;
-	#$contextBefore =~ tr|<| |;
-	$contextBefore =~ s/\h+/ /g;
-	
-	#print "Filter Context After:\n";
-
-	$contextAfter =~ s/[\d\$#@~!&*\[\];,?^`{}]+//g;
-
-	$contextAfter =~ s/<[^>]*\>//g;
-
-	$contextAfter =~ tr|=| |;
-	$contextAfter =~ tr|:| |;
-        $contextAfter =~ tr|"| |;
-	$contextAfter =~ tr|//| |;
-	$contextAfter =~ tr|/| |;
-	#$contextAfter =~ tr|>| |;
-	#$contextAfter =~ tr|<| |;
-	$contextAfter =~ s/\h+/ /g;
-
-	print "\n";
-
-	my @contextBeforeList= split(' ', $contextBefore);
-
-	my @contextAfterList= split(' ', $contextAfter);
-
-  	my @rev=reverse(@contextBeforeList); 
-
-	my $lenContext=35;
-
-	print "Context After CE :\n";
-
- 	print my $limContextAfter = join (" ", @contextAfterList[0..$lenContext]);
-
-	print "\n";
-
-	print "Context Before CE :\n";
-
-  	print my $limContextBefore = join (" ", reverse(@rev[0..$lenContext]));
-	
-	print "\n";
-	
-	print "Context surrounding CE :\n";
-
-	print my $context=$limContextBefore .' '. $limContextAfter;
-
-	print "\n";
-
-        #Remove stop words, augmented EN Stops Words with Java keywords as well to avoid noise.
-      
-	use Lingua::StopWords qw( getStopWords );
-
-	my $stopwords = getStopWords('en');
-  
-        my @words=split(' ', $context);   
-
-	#print "Removal of stop words";
-
-	my $scalarText= join ' ', grep { !$stopwords->{$_} } @words;
-
-        # Context filtered and without keywords (will add filtering of CE for the accuracy of corpus and thus N-grams) :\n";
-
-	print "Context surrounding CE filtered (filt-1) and without stop words :\n";
-
-	$scalarText =~ s/\h+/ /g;
-      
-        print $scalarText;
-	
-	print "\n";
-
-
-	# Generate N-grams for the context and by n most frequent, normalized word n-grams :
-
-        print "N-Grams Extraction :\n";
-
-	my $ngramSize=3;
-
-        my $ngramsOrderCrit='frequency';
-
-	my $onlyfirst=4;
-
-        my $normalizeFreq=1;
-
-        my $onlyMostFreqNg=1;
-
-    
-
-	my $ng = Text::Ngrams->new( windowsize => $ngramSize,type => word);
-
-	$ng->process_text($scalarText);
-		  
-        print $ng->to_string( orderby=>$ngramsOrderCrit, onlyfirst=>$onlyfirst, normalize=>$normalizeFreq, spartan=>$onlyMostFreqNg);    
-
-	print "\n";
-
-
-	# At this step we will have the algorithm for generating summaries using the generated n-grams.
-
-
-	
-}
-
-}
-
-}
-
 #
 #For stackoverflow
 elsif($config{doc_type} eq 'stackoverflow') {
