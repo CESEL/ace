@@ -28,7 +28,7 @@ update clt set kind = 'type' where kind = 'constructor';
 
 update clt set kind = 'type' where kind = 'exception';
 
-update clt set reason = 'naturally good' where trust = 0;
+update clt set reason = 'naturally good' where trust_original = 0;
 
 update clt set trust = 0, reason = 'method chain' where trust = 4;
 

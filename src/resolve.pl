@@ -1295,6 +1295,32 @@ elsif($config{doc_type} eq 'plain') {
 
 }
 #
+#For latifa 
+elsif($config{doc_type} eq 'latifa') {
+
+    my $q = qq[select sequence, sec_title, sec_content from $config{table_name}];
+
+    my $get_du = $dbh_ref->prepare($q);
+
+    $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
+
+    #Stackoverflow
+    while ( my($du, $title, $content) = $get_du ->fetchrow_array) {
+        my $tid = $du;
+
+        if(defined $title) {
+            $content = $title . ' ' . $content;
+        }
+
+
+        print "\n\nprocessing du = $du\n";
+        process($tid, $du, strip_html($content));
+
+    }
+    $get_du->finish;
+}
+
+#
 #For stackoverflow
 elsif($config{doc_type} eq 'stackoverflow') {
 
