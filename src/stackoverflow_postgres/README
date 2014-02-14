@@ -1,0 +1,18 @@
+==dump the post table into a postgres db==
+
+#download the latest dump http://www.clearbits.net/creators/146-stack-exchange-data-dump
+
+
+
+# createdb db_name
+## put the name of the db into the config file
+
+# create the table
+## psql db_name -f create_post.sql
+
+# cat so.xml | ./stackoverflow_postgres.pl config
+
+# You can then strip out the html garbage using Sham's Phpspcldata-normal.php
+## The db values etc are hardcoded in the script
+
+#so_xml.pl was a failed attempt
