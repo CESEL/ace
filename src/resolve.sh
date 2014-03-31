@@ -43,6 +43,10 @@ echo "./resolve.pl $2 second > /tmp/$1_resolve2.out"
 ./resolve.pl $2 second > /tmp/$1_resolve2.out
 date
 
+echo "save original trust sql: update clt set trust_original = trust, kind_original = kind where trust = 7;"
+psql $1 -c "update clt set trust_original = trust, kind_original = kind where trust = 7;"
+date
+
 #vacuum and analyze and create indexes
 echo "create indexes"
 psql $1 -f create_index.sql
@@ -60,6 +64,8 @@ date
 
 #Attach the post's date to each code element
 psql $1 -f date.sql 
+#faster to do insert than update so need to recreate indexes
+psql $1 -f create_index.sql
 #Create tmp tables to resolve terms by thread/date
 psql $1 -f thread.sql 
 date
