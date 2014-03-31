@@ -1,8 +1,11 @@
 ==dump the post table into a postgres db==
 
-#download the latest dump http://www.clearbits.net/creators/146-stack-exchange-data-dump
+#download the latest dump torrent http://meta.stackoverflow.com/questions/213670/is-there-a-problem-with-the-clearbits-data-dump 
 
-
+#You'll need 7z to unzip the files:
+## sudo apt-get install p7zip-full
+# then move the posts file to its own dir and run
+## 7z e stackoverflow.com-Posts.7z
 
 # createdb db_name
 ## put the name of the db into the config file

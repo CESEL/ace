@@ -27,4 +27,6 @@ ANALYZE ce;
 
 create index du_idx on clt(du);
 
+ANALYZE clt;
+
 

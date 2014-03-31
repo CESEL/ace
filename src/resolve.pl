@@ -1211,8 +1211,8 @@ elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 
     my $get_du = $dbh_ref->prepare(qq[
                   select parentid, id, title, body, msg_date from                                                                                                                                                              
-                  (select id as parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts where id in (select id from posts where tags ~ E'lucene') --the parents                                                                
-                  union select parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts where parentid in (select id from posts where tags ~ E'lucene')) as r --the children                                                    
+                  (select id as parentid, id, title, body, creationdate as msg_date from posts where id in (select id from posts where tags ~ E'lucene') --the parents                                                                
+                  union select parentid, id, title, body, creationdate as msg_date from posts where parentid in (select id from posts where tags ~ E'lucene')) as r --the children                                                    
                   order by parentid, msg_date asc
                   ]);
 
@@ -1324,15 +1324,15 @@ elsif($config{doc_type} eq 'latifa') {
 #For stackoverflow
 elsif($config{doc_type} eq 'stackoverflow') {
 
-    #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, to_timestamp(p.creationdate) as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
+    #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, p.creationdate as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
 
     #instead of old query above which modifies stackoverflow tables, we union the parents and the children (parents don't have a parentid) 
     my $q = qq[
                   select parentid, id, title, body, msg_date from                                                                                                                                                              
-                  (select id as parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts 
+                  (select id as parentid, id, title, body, creationdate as msg_date from posts 
                     where id in (select id from posts where tags ~ E\'$config{tags}\') --the parents (or questions)                                                        
-                  union select parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts 
-                    where parentid in (select id from posts where E\'$config{tags}\') --the children (answers)                                                   
+                  union select parentid, id, title, body, creationdate as msg_date from posts 
+                    where parentid in (select id from posts where tags ~ E\'$config{tags}\') --the children (answers)                                                   
                     ) as r 
                   order by parentid, msg_date asc
                   ];
@@ -1340,9 +1340,9 @@ elsif($config{doc_type} eq 'stackoverflow') {
 #    #lucene is implemented in all kinds of languages, so need complex regexp
 #    my $q = q[
 #                  select parentid, id, title, body, msg_date from                                                                                                                                                              
-#                  (select id as parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts 
+#                  (select id as parentid, id, title, body, creationdate as msg_date from posts 
 #                    where id in (select id from posts where tags ~ E'lucene' and (tags ~ E'java' or tags !~ E'net|c#|php|nhibernate|zend|clucene|ruby|c\\\\+\\\\+|pylucene|python|rails')) 
-#                  union select parentid, id, title, body, to_timestamp(creationdate) as msg_date from posts 
+#                  union select parentid, id, title, body, creationdate as msg_date from posts 
 #                    where parentid in (select id from posts where tags ~ E'lucene' and (tags ~ E'java' or tags !~ E'net|c#|php|nhibernate|zend|clucene|ruby|c\\\\+\\\\+|pylucene|python|rails')) 
 #                    ) as r 
 #                  order by parentid, msg_date asc
