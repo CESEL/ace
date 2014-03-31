@@ -9,5 +9,8 @@ alter table clt add column date timestamp with time zone;
 update clt set date = p.creationdate from posts p where cast(du as int) = p.id;
 --update clt set date = msg_date from limited_posts p where cast(du as int) = p.id;
 
+vacuum clt;
+analyze clt;
+
 
 

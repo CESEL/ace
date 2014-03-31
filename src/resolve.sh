@@ -53,13 +53,10 @@ psql $1 -f du.sql
 date
 
 #Do the local context resolution
-echo "./du.pl $2"
-./du.pl $2
+echo "./du_insert.pl $2"
+psql $1 -f create_clt_temp_du.sql
+./du_insert.pl $2
 date
-#on a large db, updates take forever, so you can do it with inserts instead
-#psql $1 -f create_clt_temp.sql
-#./du_insert.pl $2
-#TODO recreate the clt table
 
 #Attach the post's date to each code element
 psql $1 -f date.sql 
@@ -68,8 +65,9 @@ psql $1 -f thread.sql
 date
 
 #Do the thread context resolution
+psql $1 -f create_clt_temp_tid.sql
 echo "./thread.pl $2"
-./thread.pl $2
+./thread_insert.pl $2
 #./thread_freq.pl $2
 date
 
