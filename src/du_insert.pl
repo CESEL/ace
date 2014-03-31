@@ -93,7 +93,6 @@ $dbh_ref->do(q{vacuum clt});
 $dbh_ref->do(q{analyze clt});
 $dbh_ref->commit;
 
-$update_type->finish;
 $update->finish;
 $get_ref->finish;
 $dbh_ref->disconnect;
