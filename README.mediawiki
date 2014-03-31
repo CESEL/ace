@@ -15,6 +15,7 @@ More details in Rigby and Robillard ICSE 2013.
 ==Run==
 
 * As Input ACE takes the stackoverflow db in postgres format (it can handle any plaintext file, but currently there is no way to feed it raw plaintext documents)
+** to get the posts table you'll need to look to use src/stackoverflow_postgres/
 
 * See the example config file
 ** src/example.conf
@@ -31,6 +32,7 @@ More details in Rigby and Robillard ICSE 2013.
 ==The Output==
 *Just dump the clt table (Code Like Term) to a file
 ** select tid, du, pqn, simple, kind from clt where trust = 0 and kind <> 'variable';
+** You can increase the reliability of tool by joining with the index table 
 
 * tid = The thread id or question id
 * du = the document unit or post id

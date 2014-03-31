@@ -20,12 +20,21 @@ date
 psql $1 -f post_first_pass.sql 
 date
 
+echo "create index du_pqn_idx on clt(du, pqn);"
+psql $1 -c "create index du_pqn_idx on clt(du, pqn);"
+psql $1 -c "ANALYZE clt;"
+date
+
 #for undefined variables that have methods or fields, what is the most commonly declared variable type that has the same fields and methods in the entire collection of documents.
 echo "./var_resolver.pl $2"
 ./var_resolver.pl $2
+
+date
+psql $1 -c "drop index du_pqn_idx;"
 date
 
 #create the dictionary/index of valid code elements
+#creates index on du for clt processing later
 psql $1 -f dict_ce.sql
 date
 
@@ -47,7 +56,10 @@ date
 echo "./du.pl $2"
 ./du.pl $2
 date
-
+#on a large db, updates take forever, so you can do it with inserts instead
+#psql $1 -f create_clt_temp.sql
+#./du_insert.pl $2
+#TODO recreate the clt table
 
 #Attach the post's date to each code element
 psql $1 -f date.sql 
