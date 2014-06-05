@@ -46,7 +46,7 @@ order by du, i.simple, abs(i.pos - c.pos)
     
 $get_ref->execute or die $dbh_ref->errstr;
 
-my $update = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, du, simple) values (?,?,?,0,?,?)}); 
+my $insert = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, du, simple) values (?,?,?,0,?,?)}); 
 
 my $c = 0;
 my @prev;
@@ -59,16 +59,16 @@ while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $
 
     if (!defined $prev[0] or $prev[0] ne $du or $prev[1] ne $simple) {
         #update method
-        $update->execute($type, $kind, "member class defined: $simple_trust", $du, $simple);
+        $insert->execute($type, $kind, "member class defined: $simple_trust", $du, $simple);
 
         #update class as it's being used
         if ($type_trust > 0) {
-            $update_type->execute($type, 'type', 'local context', $du, $type);
+            $insert->execute($type, 'type', 'local context', $du, $type);
         }
 
     }
     elsif ($type_trust > 0) {
-        $update_type->execute($type, 'type', 'local context', $du, $type);
+        $insert->execute($type, 'type', 'local context', $du, $type);
     }
 
     @prev = ($du, $simple);
@@ -93,7 +93,7 @@ $dbh_ref->do(q{vacuum clt});
 $dbh_ref->do(q{analyze clt});
 $dbh_ref->commit;
 
-$update->finish;
+$insert->finish;
 $get_ref->finish;
 $dbh_ref->disconnect;
 

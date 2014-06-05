@@ -47,26 +47,32 @@ order by tid, i.simple, abs_date asc, p.df desc
     
 $get_ref->execute or die $dbh_ref->errstr;
 
-my $update = $dbh_ref->prepare(q{insert into clt_temp set pqn = ?, kind = ?, reason = ?, trust = 0, tid = ?, simple = ?});
+my $check = $dbh_ref->prepare(q{select tid, simple from clt_temp where tid = ? and simple = ?});
+my $insert = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, tid, simple) values (?,?,?,0,?,?)});
 
 my @prev;
+my $is_new = 0;
 while ( my($tid, $type, $type_trust, $simple, $simple_trust, $kind) = $get_ref->fetchrow_array) {
 
 
 #    print "$tid, $type, $type_trust, $simple, $simple_trust\n\n";
 
+    # is the type already been added to clt_temp?
+    $check->execute($tid, $type);
+    $is_new = $check->rows;
+
     if (!defined $prev[0] or $prev[0] ne $tid or $prev[1] ne $simple) {
         #update method
-        $update->execute($type, $kind, "thread: member class defined: $simple_trust", $tid, $simple);
+        $insert->execute($type, $kind, "thread: member class defined: $simple_trust", $tid, $simple);
 
         #update class as it's being used
-        if ($type_trust > 0) {
-            $update->execute($type, 'type',  "thread context", $tid, $type);
+        if ($is_new == 0 and $type_trust > 0) {
+            $insert->execute($type, 'type',  "thread context", $tid, $type);
         }
 
     }
-    elsif ($type_trust > 0) {
-        $update->execute($type, 'type',  "thread context", $tid, $type);
+    elsif ($is_new == 0 and $type_trust > 0) {
+        $insert->execute($type, 'type',  "thread context", $tid, $type);
 
     }
 
@@ -77,18 +83,20 @@ while ( my($tid, $type, $type_trust, $simple, $simple_trust, $kind) = $get_ref->
 $dbh_ref->commit or warn $dbh_ref->errstr;
 
 $dbh_ref->do(q{vacuum clt_temp});
+$dbh_ref->commit;
 $dbh_ref->do(q{analyze clt_temp});
 $dbh_ref->commit;
 
 #update clt
-$dbh_ref->do(q{update clt set pqn = a.pqn, kind = a.kind, reason = a.reason, trust = 0 from clt_tmp as a where clt.tid = a.tid and clt.simple = a.simple;});
+$dbh_ref->do(q{update clt set pqn = a.pqn, kind = a.kind, reason = a.reason, trust = 0 from clt_temp as a where clt.tid = a.tid and clt.simple = a.simple;});
 $dbh_ref->commit;
 
 $dbh_ref->do(q{vacuum clt});
+$dbh_ref->commit;
 $dbh_ref->do(q{analyze clt});
 $dbh_ref->commit;
 
-$update->finish;
+$insert->finish;
 $get_ref->finish;
 $dbh_ref->disconnect;
 
