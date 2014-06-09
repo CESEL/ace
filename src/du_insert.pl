@@ -46,14 +46,17 @@ order by du, i.simple, abs(i.pos - c.pos)
     
 $get_ref->execute or die $dbh_ref->errstr;
 
+#Check to make sure the class by itself isn't already defined
+my $check = $dbh_ref->prepare(q{select du, simple from clt_temp where du = ? and simple = ?});
 my $insert = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, du, simple) values (?,?,?,0,?,?)}); 
 
-my $c = 0;
 my @prev;
-my %type_seen;
+my $is_new = 0;
 while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $get_ref->fetchrow_array) {
-    $c ++;
 
+    # is the type already been added to clt_temp?
+    $check->execute($du, $type);
+    $is_new = $check->rows;
 
     #print "$du, $type, $type_trust, $simple, $simple_trust, $abs_pos\n\n";
 
@@ -62,24 +65,22 @@ while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $
         $insert->execute($type, $kind, "member class defined: $simple_trust", $du, $simple);
 
         #update class as it's being used
-        if ($type_trust > 0) {
+        if ($is_new == 0 and $type_trust > 0) {
             $insert->execute($type, 'type', 'local context', $du, $type);
         }
 
     }
-    elsif ($type_trust > 0) {
+    elsif ($is_new == 0 and $type_trust > 0) {
         $insert->execute($type, 'type', 'local context', $du, $type);
     }
 
     @prev = ($du, $simple);
 
-    if ($c % 10000 == 0) {
-        $dbh_ref->commit;
-    }
-
 }
 
 $dbh_ref->commit;
+
+$check->finish;
 
 $dbh_ref->do(q{vacuum clt_temp});
 $dbh_ref->do(q{analyze clt_temp});

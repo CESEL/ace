@@ -47,6 +47,7 @@ order by tid, i.simple, abs_date asc, p.df desc
     
 $get_ref->execute or die $dbh_ref->errstr;
 
+#Check to make sure the class by itself isn't already defined
 my $check = $dbh_ref->prepare(q{select tid, simple from clt_temp where tid = ? and simple = ?});
 my $insert = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, tid, simple) values (?,?,?,0,?,?)});
 
@@ -82,6 +83,8 @@ while ( my($tid, $type, $type_trust, $simple, $simple_trust, $kind) = $get_ref->
 
 $dbh_ref->commit or warn $dbh_ref->errstr;
 
+$check->finish;
+
 $dbh_ref->do(q{vacuum clt_temp});
 $dbh_ref->commit;
 $dbh_ref->do(q{analyze clt_temp});
@@ -101,4 +104,5 @@ $get_ref->finish;
 $dbh_ref->disconnect;
 
 __END__
+
 
