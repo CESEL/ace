@@ -47,6 +47,7 @@ order by tid, i.simple, abs_date asc, p.df desc
     
 $get_ref->execute or die $dbh_ref->errstr;
 
+#Check to make sure the class by itself isn't already defined
 my $check = $dbh_ref->prepare(q{select tid, simple from clt_temp where tid = ? and simple = ?});
 my $insert = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, tid, simple) values (?,?,?,0,?,?)});
 
@@ -82,23 +83,26 @@ while ( my($tid, $type, $type_trust, $simple, $simple_trust, $kind) = $get_ref->
 
 $dbh_ref->commit or warn $dbh_ref->errstr;
 
-$dbh_ref->do(q{vacuum clt_temp});
-$dbh_ref->commit;
-$dbh_ref->do(q{analyze clt_temp});
-$dbh_ref->commit;
-
-#update clt
-$dbh_ref->do(q{update clt set pqn = a.pqn, kind = a.kind, reason = a.reason, trust = 0 from clt_temp as a where clt.tid = a.tid and clt.simple = a.simple;});
-$dbh_ref->commit;
-
-$dbh_ref->do(q{vacuum clt});
-$dbh_ref->commit;
-$dbh_ref->do(q{analyze clt});
-$dbh_ref->commit;
-
+$check->finish;
 $insert->finish;
 $get_ref->finish;
 $dbh_ref->disconnect;
 
 __END__
+$dbh_ref = DBI->connect("dbi:Pg:database=$config{db_name}", '', '', {AutoCommit => 1});
+$dbh_ref->do(q{vacuum clt_temp});
+$dbh_ref->do(q{analyze clt_temp});
+$dbh_ref->disconnect;
+
+$dbh_ref = DBI->connect("dbi:Pg:database=$config{db_name}", '', '', {AutoCommit => 0});
+#update clt
+$dbh_ref->do(q{update clt set pqn = a.pqn, kind = a.kind, reason = a.reason, trust = 0 from clt_temp as a where clt.tid = a.tid and clt.simple = a.simple;});
+$dbh_ref->commit;
+$dbh_ref->disconnect;
+
+$dbh_ref = DBI->connect("dbi:Pg:database=$config{db_name}", '', '', {AutoCommit => 1});
+$dbh_ref->do(q{vacuum clt});
+$dbh_ref->do(q{analyze clt});
+$dbh_ref->disconnect;
+
 

@@ -13,7 +13,7 @@ create unlogged table clt (
     reason text, --verbose trust/how a code element was resolved
     trust_original integer, --originally how trustworthy the CE is (see README for values)
     kind_original text, -- we turn constructors into types, this is the original kind value
-    context integer default 1, --groupings of reasons see context.sql
+    context integer default 1 --groupings of reasons see context.sql
 );
 
 

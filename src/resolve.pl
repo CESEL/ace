@@ -1206,6 +1206,27 @@ if($config{doc_type} eq 'test') {
         process($tid, $du, strip_html($content));
     }
 }
+
+#
+#From emails 
+elsif($config{doc_type} eq 'email') {
+
+
+    my $get_du = $dbh_ref->prepare(q{select thread_id, msg_id, subject, body from email});
+    $get_du->execute or die "Can't get body from db ", $dbh_ref->errstr;
+
+    #Stackoverflow
+    while ( my($tid, $du, $subject, $content) = $get_du ->fetchrow_array) {
+
+	    $content .= $subject . ' ';
+
+            print "\n\nprocessing: tid = $tid email = $du\n";
+            process($tid, $du, strip_html($content));
+        }
+
+}
+
+
 #for regenerating the text to dump into nlp pipeline
 elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
 

@@ -54,12 +54,12 @@ my @prev;
 while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $get_ref->fetchrow_array) {
 
 
-    #print "$du, $type, $type_trust, $simple, $simple_trust, $abs_pos\n\n";
+    print "$du, $type, $type_trust, $simple, $simple_trust, $abs_pos, $kind\n\n";
 
     if (!defined $prev[0] or $prev[0] ne $du or $prev[1] ne $simple) {
         #update method
         $update->execute($type, $kind, "member class defined: $simple_trust", $du, $simple);
-
+	
         #update class as it's being used
         if ($type_trust > 0) {
             $update_type->execute($type, "member class defined $type_trust", $du, $type);

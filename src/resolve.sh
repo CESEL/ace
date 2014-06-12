@@ -60,6 +60,7 @@ date
 echo "./du_insert.pl $2"
 psql $1 -f create_clt_temp_du.sql
 ./du_insert.pl $2
+psql $1 -f after_du_insert.sql
 date
 
 #Attach the post's date to each code element
@@ -74,8 +75,9 @@ date
 psql $1 -f create_clt_temp_tid.sql
 echo "./thread.pl $2"
 ./thread_insert.pl $2
-#./thread_freq.pl $2
+psql $1 -f after_thread_insert.sql
 date
+
 
 echo "cleans up the db"
 psql $1 -f final.sql

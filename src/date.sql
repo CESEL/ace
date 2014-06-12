@@ -11,8 +11,8 @@
 
 --updates take too long
 alter table clt rename to clt_delme;
-create unlogged table clt as select c.*, p.creationdate as date from clt_delme c, posts p where cast(du as int) = p.id;
-drop table clt_delme;
+create unlogged table clt as select c.*, e.date as date from clt_delme c, email e where c.du = e.msg_id;
+--drop table clt_delme;
 
 
 
