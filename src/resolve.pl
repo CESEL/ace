@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use warnings;
-use strict;
+#use strict;
 
 use DBI;
 use Cwd;
@@ -13,6 +13,14 @@ use File::Find::Rule;
 use File::Slurp;
 
 use Config::General;
+
+use Text::Ngrams;
+use Text::Document;
+use File::Basename;
+use String::CamelCase qw(camelize decamelize wordsplit);
+use String::Trim;
+use Lingua::StopWords qw(getStopWords);
+use Path::Class;
 
 #if we leave the html in it could get confused with a generic
 #random flags to start and end code snippets (KLUDGE: will mess up position!): could remove it before processing
@@ -1189,6 +1197,180 @@ sub process_dir {
 	chdir '..' or die "Cannot backout of $path";
 }
 
+sub rm_squiggly{
+		
+	my ($start) = $_[1];
+	for (my $i = $start + 1; $i < length($_[0]); $i++){
+		if (substr($_[0], $i, 1) eq '{'){
+			rm_round($_[0], $i);
+		}
+		if (substr($_[0], $i, 1) eq '}'){
+			substr($_[0], $start, $i - $start + 1) = "";
+			last;
+		}	
+	}
+}
+
+sub rm_round{
+		
+	my ($start) = $_[1];
+	for (my $i = $start + 1; $i < length($_[0]); $i++){
+		if (substr($_[0], $i, 1) eq '('){
+			rm_round($_[0], $i);
+		}
+		if (substr($_[0], $i, 1) eq ')'){
+			substr($_[0], $start, $i - $start + 1) = "";
+			last;
+		}	
+	}
+}
+
+sub rm_square{
+		
+	my ($start) = $_[1];
+	for (my $i = $start + 1; $i < length($_[0]); $i++){
+		if (substr($_[0], $i, 1) eq '['){
+			rm_round($_[0], $i);
+		}
+		if (substr($_[0], $i, 1) eq ']'){
+			substr($_[0], $start, $i - $start + 1) = "";
+			last;
+		}	
+	}
+}
+
+#removes lines of code, dates, time etc.
+sub clean_body{
+
+	my ($body) = $_[0];
+	#remove squiggly brackets
+	for (my $i = 0; $i < length($body); $i++){
+		if (substr($body, $i, 1) eq '{'){
+			rm_squiggly($body,$i);
+		}
+	}
+
+	#remove round brackets
+	for (my $i = 0; $i < length($body); $i++){
+		if (substr($body, $i, 1) eq '('){
+			rm_round($body,$i);
+		}
+	}
+
+	#remove square brackts
+	for (my $i = 0; $i < length($body); $i++){
+		if (substr($body, $i, 1) eq '['){
+			rm_square($body,$i);
+		}
+	}
+
+	#remove point concatinated
+	$body =~ s/( \S+? (\.\S+){2,}?  )//gxe;
+		
+	#remove / concatinated
+	$body =~ s/( \S+? (\/\S+){2,}?  )//gxe;
+	
+	#remove _ concatinated
+	$body =~ s/( \S+? (_\S+){2,}?  )//gxe;
+	
+	#remove attachments
+	$body =~ s/Attachment: HADOOP-\S+?\s//g;
+	
+	#remove web address
+	$body =~ s/(http|https):\/\/\S+?\s//g;
+	
+	#Content type: something
+	$body =~ s/Content-Type: \S+?\s//g;
+	
+	#charset="something"
+	$body =~ s/charset="\S+?"\s//g;
+	
+	#Content-Transfer-Encoding: something
+	$body =~ s/Content-Transfer-Encoding: \S+?\s//g;
+	
+	#lines starting with two or more dashes --....
+	$body =~ s/(^|\s)--\S+?\s//g;	
+	
+	#remove filetypes, .jar .java etc
+	$body =~ s/(\.jar|\.java|\.xml|)//g;
+
+	#remove numbers and punctuation
+	$body =~ s/[\d\$#@~!&*;,?^'=:<>\."\/\(\)\{\}\[\]]+//g;
+
+	$body =~ tr|-| |;
+
+	#remove <stuff..>
+	$body =~ s/<[^>]*\>//g;
+
+
+	
+
+	return $body;
+							
+}
+
+#nlp techniques
+sub remove_stop_words{
+
+	my ($body) = $_[0];
+	$body = lc($body);
+	my $stopwords = getStopWords('en');
+	my @words = split(' ', $body);
+	my $scalartext = join ' ', grep {!$stopwords -> {$_} } @words;
+	#$scalartext =~ s/\h+/ /g;
+	return $scalartext;
+}
+
+#wordsplit
+sub split_words{
+	
+	my ($body) = $_[0];
+	my @arrayAll;
+	my @scalarArray = split (' ', $body);
+	foreach $word (@scalarArray){
+		my @array = wordsplit($word);
+		push(@arrayAll, @array);
+	}
+	
+	my $splittext = join ' ', @arrayAll;
+	return $splittext;
+}
+
+#remove java and common keywords
+sub remove_java{
+	
+	my ($body) = $_[0];
+	my @body_list = split(' ', $body);
+	my $filename = "files/common-words.txt";
+	open($file, $filename) or die ("could not open file");
+
+	my @commonWords;
+	foreach my $line (<$file>){
+		push(@commonWords, $line);
+	}
+
+	my %stop = map { lc $_ => 1} @commonWords;
+	my (@ok, %seen);
+	foreach (@body_list){
+		push @ok, $_ unless $stop{lc $_} or $seen{lc $_}++;	
+	}
+	$body = join ' ', @ok;
+	return $body;
+}
+
+#generate ngrams
+sub getnGram{
+	my ($body) = $_[0];
+	my $nGramSize = 5;
+	my $nGramOrderCriteria = 'frequency';
+	my $onlyFirst = 5;
+	my $normalizeFrequency = 1;
+	my $onlyMostFrequentng = 1;
+	my $nGram = Text::Ngrams -> new ( windowsize => $nGramSize, type => word);
+	$nGram -> process_text($body);
+	my $n_gram = $nGram -> to_string(orderby => $nGramOrderCriteria, onlyfirst => $onlyFirst, normalize => $normalizeFrequency, spartan => $onlyMostFrequent);
+	return $n_gram;
+}
 
 #testing purposes -> feed a file: e.g., dealwiththis.txt
 if($config{doc_type} eq 'test') {
@@ -1207,6 +1389,63 @@ if($config{doc_type} eq 'test') {
     }
 }
 
+elsif($config{processing} eq 'summary' and $config{doc_type} eq 'email') {
+	my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du = '1035654119.30.1388136223004.JavaMail.hudson\@aegis' order by du, pos});
+	#my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where simple = 'TestWritable' order by du, pos limit 5});
+	my $get_du = $dbh_ref->prepare(q[select thread_id, msg_id, subject, body from email where msg_id = ?]);
+
+	$get_pos_len->execute or die;
+	my $sc;
+   
+	my $body;
+	my $clean_body;
+	my $cleaner_body;
+	my $split_text;
+	my $more_body;
+	my $ngram;
+
+
+	while(my ($du, $pqn, $simple, $kind, $pos, $len) = $get_pos_len->fetchrow_array){
+				
+		$get_du->execute($du) or die "Can't get body from db ", $dbh_ref->errstr;
+		my($thread_id, $du, $subject, $body) = $get_du->fetchrow_array;
+		if (defined $subject){
+			$body .= $subject . ' ';
+		}
+		$sc = strip_html($body);
+		
+		#$split_text = split_words($sc);
+		
+		$clean_body = clean_body($sc);
+
+		$cleaner_body = remove_stop_words($clean_body);
+	
+		$more_body = remove_java($cleaner_body);
+	
+		my $dir = dir("/home/da_bourq/Desktop/test");
+		my $filename = $dir -> file("$simple".'_'."$du".".txt");
+		
+		open (my $fh, '>', $filename);
+		print $fh $more_body;
+		close $fh;
+
+
+		#$ngram = getnGram($more_body);	
+
+		print "ORIGINAL:\n$body\n\nFIRSTPASS:\n$clean_body\n\nSECONDPASS\n$cleaner_body\n\nTHIRDPASS\n$more_body\n\nNGRAM:\n\n";
+	
+		
+
+		#if ($pqn !~ /.*\..*/){
+		#	print "pqn: ".$pqn."\n"."simple: ".$simple."\n"."we get: ".substr($sc, $pos, $len)."\n\n";
+			
+		#}
+	}
+
+
+}
+
+
 #
 #From emails 
 elsif($config{doc_type} eq 'email') {
@@ -1215,7 +1454,7 @@ elsif($config{doc_type} eq 'email') {
     my $get_du = $dbh_ref->prepare(q{select thread_id, msg_id, subject, body from email});
     $get_du->execute or die "Can't get body from db ", $dbh_ref->errstr;
 
-    #Stackoverflow
+   
     while ( my($tid, $du, $subject, $content) = $get_du ->fetchrow_array) {
 
 	    $content .= $subject . ' ';
