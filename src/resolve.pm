@@ -1,4 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
+
+package resolve;
 
 use warnings;
 use strict;
@@ -13,14 +15,17 @@ use File::Find::Rule;
 use File::Slurp;
 
 use Config::General;
+use html;
 
-use Text::Ngrams;
-use Text::Document;
-use File::Basename;
-use String::CamelCase qw(camelize decamelize wordsplit);
-use String::Trim;
-use Lingua::StopWords qw(getStopWords);
-use Path::Class;
+#use Text::Ngrams;
+#use Text::Document;
+#use File::Basename;
+#use String::CamelCase qw(camelize decamelize wordsplit);
+#use String::Trim;
+#use Lingua::StopWords qw(getStopWords);
+#use Path::Class;
+
+
 
 #if we leave the html in it could get confused with a generic
 #random flags to start and end code snippets (KLUDGE: will mess up position!): could remove it before processing
@@ -28,47 +33,64 @@ use Path::Class;
 my $START_CODE = ' prxh_START_SNIPPET ';
 my $END_CODE = ' prxh_END_SNIPPET ';
 
-my $config_path = shift @ARGV;
-
+#my $config_path = shift @ARGV;
+my $config_path;
 #two passes, find trustued code elements, then reparse to pull out all ces
 my $pass;
-if (@ARGV > 0) {
-    $pass = shift @ARGV;
-}
 
-if (!defined $pass) {
-    $pass = 'first';
-}
-
-if (!defined $config_path) {
-	$config_path = 'config';
-}
-die "Config file \'$config_path\' does not exist"
-	unless (-e $config_path);
-
-my %config =  Config::General::ParseConfig($config_path);
-
-my $dbh_ref = DBI->connect("dbi:Pg:database=$config{db_name}", '', '', {AutoCommit => 0});
-
+my %config;
+my $dbh_ref;
+my $get_pos;
 #get positions for du
 my %ce_pos;
-my $get_pos = $dbh_ref->prepare(q{select pos, simple from clt where du = ?});
 
 #get all the valid CEs for the second pass
 my %ce;
-if ($pass eq 'second') {
-
-    #define dictionary acceptable CEs
-    my $get_hash = $dbh_ref->prepare(q{select pqn, simple from ce where kind <> 'package' and kind <> 'variable'});
-    $get_hash->execute or die $dbh_ref->errstr;
-    while ( my($pqn, $simple) = $get_hash->fetchrow_array) {
-            $ce{$simple} = 1; #$pqn; --can have dups so resolve as undefined
-    }
-    $get_hash->finish;
-}
 
 #see create.sql for table definition
-my $insert_simple = $dbh_ref->prepare(q{insert into clt(snip, tid, du, pqn, simple, kind, trust, pos) values(?,?,?,?,?,?,?,?)});
+my $insert_simple;
+#called automatically when use 'module' is called
+sub import {
+	#my $self = shift;
+	$config_path = shift;
+	$pass = shift;
+	#print "making it to here";
+
+
+	if (!defined $pass) {
+		$pass = 'first';
+	}
+
+	if (!defined $config_path) {
+		$config_path = 'config';
+	}
+	die "Config file \'$config_path\' does not exist"
+		unless (-e $config_path);
+
+
+	%config =  Config::General::ParseConfig($config_path);
+
+	$dbh_ref = DBI->connect("dbi:Pg:database=$config{db_name}", '', '', {AutoCommit => 0});
+
+	$get_pos = $dbh_ref->prepare(q{select pos, simple from clt where du = ?});
+
+
+
+	if ($pass eq 'second') {
+
+    		#define dictionary acceptable CEs
+    		my $get_hash = $dbh_ref->prepare(q{select pqn, simple from ce where kind <> 'package' and kind <> 'variable'});
+    		$get_hash->execute or die $dbh_ref->errstr;
+    		while ( my($pqn, $simple) = $get_hash->fetchrow_array) {
+            		$ce{$simple} = 1; #$pqn; --can have dups so resolve as undefined
+    		}
+    		$get_hash->finish;
+	}
+
+
+	#see create.sql for table definition
+	$insert_simple = $dbh_ref->prepare(q{insert into clt(snip, tid, du, pqn, simple, kind, trust, pos) values(?,?,?,?,?,?,?,?)});
+}
 
 #the symbols we're allowing
 my $ln = '-a-z_0-9';
@@ -115,7 +137,8 @@ my $order = 0; #the order in which ces are found
 
 #pre-condition: already checked that it is a meth
 sub meth_two_camel($) {
-
+    
+	#my $self = shift;
     my($name) = @_;
 
     #is there atleast one uppercase?
@@ -135,7 +158,8 @@ sub meth_two_camel($) {
 
 #already checked that it could be a class
 sub class_two_camel($) {
-
+    
+	#my $self = shift;
     my($name) = @_;
 
     #upper, followed by a lower, followed by an upper
@@ -158,6 +182,7 @@ sub class_two_camel($) {
 #e.g., methodName(String s, SomeClass sc)
 sub meth_vars($$$$$) {
 
+	#my $self = shift;
     my($is_snippet, $tid, $du, $pa, $pap) = @_;
 
     pos($pa) ++; #move over '('
@@ -179,6 +204,7 @@ sub meth_vars($$$$$) {
 
 sub parse($$$$$$$) {
 
+	#my $self = shift;
     my($tid, $du, $content, $d_class, $inside_quote, $is_snippet, $pre) = @_;
 
     #the order of the regexp is important, be as specific as possible and 
@@ -853,6 +879,8 @@ sub parse($$$$$$$) {
 }
 
 sub parse_sec($$$) {
+
+	#my $self = shift;
     my($tid, $du, $content) = @_;
     my $is_snippet = 0;
 
@@ -1007,100 +1035,10 @@ sub parse_sec($$$) {
     }
 }
 
-#sub strip_html($) {
-#    my ($content) = @_;
-#
-#    #end of line is uninteresting and would make parsing very complex
-#    $content =~ s/[\n\r]/ /g;
-#
-#    #uggh, annoying >< nonsense!
-#    $content =~ s/\&gt;/>/g;
-#    $content =~ s/\&lt;/</g;
-#    #kludge: eliminate arrays -- just want type
-#    $content =~ s/\[\d*\]//g;
-#    # sharp # is like a dot
-#    $content =~ s/\s#/ /g;
-#    $content =~ s/#/./g;
-#    # :: is like a dot
-#    $content =~ s/::/./g;
-#
-#    print "$content\n\n";
-#
-#    return $content;
-#
-#}
-
-#use HTML::TreeBuilder;
-#use HTML::FormatText;
-#
-#sub strip_html($) {
-#
-#    my ($content) = @_;
-#
-#    my$tree = HTML::TreeBuilder->new->parse_content($content);
-#    my $formatter = HTML::FormatText->new(leftmargin => 0, rightmargin => 50);
-#    $content = $formatter->format($tree);
-#
-#    #end of line is uninteresting and would make parsing very complex
-#    $content =~ s/[\n\r]/ /g;
-#
-#    #uggh, annoying >< nonsense!
-#    $content =~ s/\&gt;/>/g;
-#    $content =~ s/\&lt;/</g;
-#    #kludge: eliminate arrays -- just want type
-#    $content =~ s/\[\d*\]//g;
-#    # sharp # is like a dot
-#    $content =~ s/\s#/ /g;
-#    $content =~ s/#/./g;
-#    # :: is like a dot
-#    $content =~ s/::/./g;
-#
-#    print "$content\n\n";
-#
-#    return $content;
-#}
-
-
-
-#tags from http://www.w3schools.com/tags/default.asp
-my $html = '\!\-\-|\!DOCTYPE|a|abbr|acronym|address|applet|area|b|base|basefont|bdo|big|blockquote|body|br|button|caption|center|cite|col|colgroup|dd|del|dfn|dir|div|dl|dt|em|fieldset|font|form|frame|frameset|head|h[1-6]|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|map|menu|meta|noframes|noscript|object|ol|optgroup|option|p|param|q|s|samp|script|select|small|span|strike|strong|style|sub|sup|table|tbody|td|textarea|tfoot|th|thead|title|tr|tt|u|ul|var|pre|code';
-
-
-sub strip_html($) {
-
-    my ($content) = @_;
-
-    #print "$content\n\n";
-
-    #end of line is uninteresting and would make parsing very complex
-    $content =~ s/[\n\r]/ /g;
-
-    #uggh, annoying >< nonsense!
-    $content =~ s/\&gt;/>/g;
-    $content =~ s/\&lt;/</g;
-
-    #want to keep code snips
-    $content =~ s/<pre><code>/$START_CODE/gxms;
-    $content =~ s|</code></pre>|$END_CODE|gxms;
-
-    #will eat int etc as generic
-    $content =~ s/<\/* ($html) .*?>/ /gxms;
-
-    #kludge: eliminate arrays -- just want type
-    $content =~ s/\[\d*\]//g;
-    # sharp # is like a dot
-    $content =~ s/\s#/ /g;
-    $content =~ s/#/./g;
-    # :: is like a dot
-    $content =~ s/::/./g;
-
-    #print $content, "\n\n";
-
-    return $content;
-}
 
 sub process ($$$) {
     
+	#my $self = shift;
     my($tid, $du, $content) = @_;
     
     %var_to_class = (); #hash map of variable definitions to type
@@ -1134,20 +1072,13 @@ sub process ($$$) {
 
 }
 
-sub code_snips_to_htlm($) {
-
-    my ($content) = @_;
-    $content =~ s/$START_CODE/<code>/g;
-    $content =~ s/$END_CODE/<\/code>/g;
-    return $content;
-
-}
 
 #
 # Step through all the directories
 #
 sub process_dir {
 
+	#my $self = shift;
 	my ($path, $config_ref, $db_check_repo_ref) = @_;
 
 	chdir $path or die "Cannot processes $path";
@@ -1178,7 +1109,7 @@ sub process_dir {
                     $file->close;
 
                     #process
-                    $content = strip_html($content);
+                    $content = html->strip_html($content);
                     #Kludge: make du globally unique
                     process($short_path, $short_path . '/' . $next_path, $content);
 
@@ -1197,510 +1128,17 @@ sub process_dir {
 	chdir '..' or die "Cannot backout of $path";
 }
 
-sub rm_squiggly{
-		
-	my ($start) = $_[1];
-	for (my $i = $start + 1; $i < length($_[0]); $i++){
-		if (substr($_[0], $i, 1) eq '{'){
-			rm_round($_[0], $i);
-		}
-		if (substr($_[0], $i, 1) eq '}'){
-			substr($_[0], $start, $i - $start + 1) = "";
-			last;
-		}	
-	}
-}
-
-sub rm_round{
-		
-	my ($start) = $_[1];
-	for (my $i = $start + 1; $i < length($_[0]); $i++){
-		if (substr($_[0], $i, 1) eq '('){
-			rm_round($_[0], $i);
-		}
-		if (substr($_[0], $i, 1) eq ')'){
-			substr($_[0], $start, $i - $start + 1) = "";
-			last;
-		}	
-	}
-}
-
-sub rm_square{
-		
-	my ($start) = $_[1];
-	for (my $i = $start + 1; $i < length($_[0]); $i++){
-		if (substr($_[0], $i, 1) eq '['){
-			rm_round($_[0], $i);
-		}
-		if (substr($_[0], $i, 1) eq ']'){
-			substr($_[0], $start, $i - $start + 1) = "";
-			last;
-		}	
-	}
-}
-
-#removes lines of code, dates, time etc.
-sub clean_body{
-
-	my ($body) = @_;
-	#remove squiggly brackets
-	for (my $i = 0; $i < length($body); $i++){
-		if (substr($body, $i, 1) eq '{'){
-			rm_squiggly($body,$i);
-		}
-	}
-
-	#remove round brackets
-	for (my $i = 0; $i < length($body); $i++){
-		if (substr($body, $i, 1) eq '('){
-			rm_round($body,$i);
-		}
-	}
-
-	#remove square brackts
-	for (my $i = 0; $i < length($body); $i++){
-		if (substr($body, $i, 1) eq '['){
-			rm_square($body,$i);
-		}
-	}
-
-	#remove point concatinated
-	$body =~ s/( \S+? (\.\S+){2,}?  )//gxe;
-		
-	#remove / concatinated
-	$body =~ s/( \S+? (\/\S+){2,}?  )//gxe;
-	
-	#remove _ concatinated
-	$body =~ s/( \S+? (_\S+){2,}?  )//gxe;
-	
-	#remove attachments
-	$body =~ s/Attachment: HADOOP-\S+?\s//g;
-	
-	#remove web address
-	$body =~ s/(http|https):\/\/\S+?\s//g;
-	
-	#Content type: something
-	$body =~ s/Content-Type: \S+?\s//g;
-	
-	#charset="something"
-	$body =~ s/charset="\S+?"\s//g;
-	
-	#Content-Transfer-Encoding: something
-	$body =~ s/Content-Transfer-Encoding: \S+?\s//g;
-	
-	#lines starting with two or more dashes --....
-	$body =~ s/(^|\s)--\S+?\s//g;	
-	
-	#remove filetypes, .jar .java etc
-	$body =~ s/(\.jar|\.java|\.xml|)//g;
-
-	#remove numbers and punctuation
-	$body =~ s/[\d\$#@~!&*;,?^'=:<>%\+\."\/\(\)\{\}\[\]]+//g;
-
-	$body =~ tr|-| |;
-
-	#remove <stuff..>
-	$body =~ s/<[^>]*\>//g;
-
-
-	$body =~ s/\h+/ /g;
-	
-
-	return $body;
-							
-}
-
-#nlp techniques
-sub remove_stop_words{
-
-	my ($body) = @_;
-	$body = lc($body);
-	my $stopwords = getStopWords('en');
-	my @words = split(' ', $body);
-	my $scalartext = join ' ', grep {!$stopwords -> {$_} } @words;
-	$scalartext =~ s/\h+/ /g;
-	return $scalartext;
-}
-
-#wordsplit
-sub split_words{
-	
-	my ($body) = @_;
-	$body =~ s/\h+/ /g;
-	my @arrayAll;
-	my @scalarArray = split (' ', $body);
-	foreach my $word (@scalarArray){
-		my @array = wordsplit($word);
-		push(@arrayAll, @array);
-	}
-	
-	my $splittext = join ' ', @arrayAll;
-	return $splittext;
-}
-
-
-#remove java and common keywords
-sub remove_java{
-	
-	my ($body) = @_;
-	my @body_list = split(' ', $body);
-	my $filename = "files/common_words2.txt";
-	
-	open(FILE, $filename) or die ("could not open file");
-	my %stop = ();
-	my @commonWords;
-	foreach my $line (<FILE>){
-		chomp $line;
-		push(@commonWords, $line);
-	}
-	close(FILE);
-	%stop = map { lc $_ => 1} @commonWords;
-
-	my (@ok, %seen);
-	foreach my $word (@body_list){
-		push @ok, $word unless $stop{lc $word} or $seen{lc $word}++;
-	}
-	$body = join ' ', @ok;
-	return $body;
-}
-
-#generate ngrams
-sub getnGram{
-	my ($body) = @_;
-	my $nGramSize = 5;
-	my $nGramOrderCriteria = 'frequency';
-	my $onlyFirst = 30;
-	my $normalizeFrequency = 0;
-	my $onlyMostFrequentng = 1;
-	my $type = 'word';
-	my $nGram = Text::Ngrams -> new ( windowsize => $nGramSize, type => $type);
-	$nGram -> process_text($body);
-	my $n_gram = $nGram -> to_string(orderby => $nGramOrderCriteria, onlyfirst => $onlyFirst, normalize => $normalizeFrequency, spartan => $onlyMostFrequentng);
-	return $n_gram;
-}
-
-#testing purposes -> feed a file: e.g., dealwiththis.txt
-if($config{doc_type} eq 'test') {
-    my $content;
-    my $title;
-    while (<>) {
-        $content .= $_;
-    }
-
-    if (defined $content) {
-        my $tid = 'test_thread';
-        my $du = 'test_du';
-
-        print "\n\nprocessing du = $du\n";
-        process($tid, $du, strip_html($content));
-    }
-}
-
-elsif($config{processing} eq 'summary' and $config{doc_type} eq 'email') {
-	#my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du = '1035654119.30.1388136223004.JavaMail.hudson\@aegis' order by du, pos});
-	my $get_pos_len = $dbh_ref->prepare(qq{select distinct(du), clt.pqn, clt.simple, clt.kind, clt.pos, length(clt.simple) as len  from clt where clt.trust = 0 and clt.kind <> 'variable' order by clt.du, clt.pos});
-	my $get_du = $dbh_ref->prepare(q[select thread_id, msg_id, subject, body from email where msg_id = ?]);
-
-	my $insert = $dbh_ref->prepare(q[insert into good_email_tmp (du, subject, pqn, simple, body) values (?, ?, ?, ?, ?)]);
-
-	#my $get_simple = $dbh_ref->prepare(q[select simple from clt where du = '?']);
-
-	$get_pos_len->execute or die;
-   
-	my $body;
-	my $ngram;
-	my @all_body;
-	my @all_original_body;
-	my $final_body;
-	my $count = 0;
-	my $all_count = 0;
-
-	while(my ($du, $pqn, $simple, $kind, $pos, $len, $df) = $get_pos_len->fetchrow_array){
-				
-		$get_du->execute($du) or die "Can't get body from db ", $dbh_ref->errstr;
-		my($thread_id, $du, $subject, $body) = $get_du->fetchrow_array;
-		if (defined $subject){
-			$body .= $subject . ' ';
-		}
-		$all_count++;
-		#my $original_body = $body;
-		$body = strip_html($body);	
-
-		$body = clean_body($body);
-
-		if ($body =~ m/$simple/) {
-			
-			$count++;
-		
-			$body = split_words($body);
-
-			$body = remove_stop_words($body);
-	
-			$body = remove_java($body);
-		
-		#push(@all_original_body, $original_body);
-		#push(@all_body, $body);
-		
-			$insert->execute($du, $subject, $pqn, $simple, $body);
-		
-			if ($all_count % 500 == 0){
-				print "$all_count processed\n";
-				print "$count entered\n\n";
-				$dbh_ref->commit;	
-			}
-		}
-
-		#$ngram = getnGram($more_body);	
-
-		#print "ORIGINAL:\n$body\n\nFIRSTPASS:\n$clean_body\n\nSECONDPASS\n$cleaner_body\n\nTHIRDPASS\n$more_body\n\n";
-	
-		
-
-		#if ($pqn !~ /.*\..*/){
-		#	print "pqn: ".$pqn."\n"."simple: ".$simple."\n"."we get: ".substr($sc, $pos, $len)."\n\n";
-			
-		#}
-	}
-	print "$all_count processed\n";
-	print "$count entered\n\n";
-	$dbh_ref->commit;
-	$insert->finish;
-	$get_du->finish;
-	$get_pos_len->finish;
-
-	#$final_body = join ' ', @all_body;
-	#my $final_original_body = join ' ', @all_original_body;
-	#print $final_original_body;
-	#$ngram = getnGram($final_body);
-	#print $ngram;
-
-}
-
-
 #
-#From emails 
-elsif($config{doc_type} eq 'email') {
-
-
-    my $get_du = $dbh_ref->prepare(q{select thread_id, msg_id, subject, body from email});
-    $get_du->execute or die "Can't get body from db ", $dbh_ref->errstr;
-
-   
-    while ( my($tid, $du, $subject, $content) = $get_du ->fetchrow_array) {
-
-	    $content .= $subject . ' ';
-
-            print "\n\nprocessing: tid = $tid email = $du\n";
-            process($tid, $du, strip_html($content));
-        }
-
-}
-
-
-#for regenerating the text to dump into nlp pipeline
-elsif($config{processing} eq 'nlp' and $config{doc_type} eq 'stackoverflow') {
-
-    my $get_du = $dbh_ref->prepare(qq[
-                  select parentid, id, title, body, msg_date from                                                                                                                                                              
-                  (select id as parentid, id, title, body, creationdate as msg_date from posts where id in (select id from posts where tags ~ E'lucene') --the parents                                                                
-                  union select parentid, id, title, body, creationdate as msg_date from posts where parentid in (select id from posts where tags ~ E'lucene')) as r --the children                                                    
-                  order by parentid, msg_date asc
-                  ]);
-
-    my $get_pos_len = $dbh_ref->prepare(qq{select pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and du = ?  order by pos});
-
-    $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
-
-
-    my %map_kind = (
-        type => '<FONT COLOR="RED">',
-        method => '<FONT COLOR="BLUE">',
-        variable => '<FONT COLOR="GREEN">',
-        field => '<FONT COLOR="ORANGE">',
-        package => '<FONT COLOR="yellow">',
-        annotation => '<FONT COLOR="purple">',
-        enum => '<FONT COLOR="grey">',
-        annotation_package => '<FONT COLOR="purple">',
-    );
-
-    my $end_kind = '</FONT>';
-
-    #Stackoverflow
-    while ( my($tid, $du, $title, $content) = $get_du ->fetchrow_array) {
-
-        #print "Link: http://stackoverflow.com/questions/$du\n";
-        #print $title . $content;
-
-        if(defined $title) {
-            $content = $title . ' ' . $content;
-        } 
-
-        #print "\n\nprocessing du = $du\n";
-        my $sc = strip_html($content);
-        #print STDERR "$sc\n\n";
-        #process($tid, $du, strip_html($content));
-
-
-        $get_pos_len->execute($du) or die "Can't get clts from db ", $dbh_ref->errstr;
-
-        print "<br><a href=\"http://stackoverflow.com/questions/$du\">Post: $du</a>\n<br>";
-        my $old_end = 0;
-        while ( my($pqn, $simple, $kind, $pos, $len) = $get_pos_len->fetchrow_array) {
-            #test - print " $old_end, $pos, $len --", substr($sc, $old_end, $pos-$old_end), "\n";
-            my $current = substr($sc, $old_end, $pos-$old_end);
-            print code_snips_to_htlm($current);
-            $old_end = $pos+$len;
-            #test - print " $old_end, $pos -- prxh_$kind\{$pqn\.$simple\} \n";
-            print " $map_kind{$kind}$pqn\.$simple$end_kind ";
-        }
-
-        print code_snips_to_htlm(substr($sc, $old_end, length($sc)));
-        print "<br><a href=\"http://stackoverflow.com/questions/$du\">Post: $du</a><br>\n";
-
-    }
-    $get_du->finish;
-}
-#
-#From plaintext documents
-elsif($config{doc_type} eq 'plain') {
-
-    my $files_obj = File::Find::Rule->file()
-                                 ->start($config{dir});
-
-    while (my $file = $files_obj->match() ) {
-
-        #print "$file\n";
-        if ($file =~ m|\Q$config{ignore_path}\E/*(.*?)([^/]+)$|) {
-            my $tid = $1;
-            my $du = $2;
-
-            print "\n\nprocessing: dir or tid = $tid file or du = $du\n";
-            my $content = read_file($file);
-            process($tid, $du, strip_html($content));
-        }
-
-
-        last;
-
-    }
-
-}
-#
-#For latifa 
-elsif($config{doc_type} eq 'latifa') {
-
-    my $q = qq[select sequence, sec_title, sec_content from $config{table_name}];
-
-    my $get_du = $dbh_ref->prepare($q);
-
-    $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
-
-    #Stackoverflow
-    while ( my($du, $title, $content) = $get_du ->fetchrow_array) {
-        my $tid = $du;
-
-        if(defined $title) {
-            $content = $title . ' ' . $content;
-        }
-
-
-        print "\n\nprocessing du = $du\n";
-        process($tid, $du, strip_html($content));
-
-    }
-    $get_du->finish;
-}
-
-#
-#For stackoverflow
-elsif($config{doc_type} eq 'stackoverflow') {
-
-    #my $get_du = $dbh_ref->prepare(qq[select parentid, p.id, title, body, p.creationdate as msg_date, owneruserid as nickname, displayname as name, emailhash as email from posts p, users u where owneruserid = u.id and parentid in (select id from posts where tags ~ E\'$config{tags}\') order by parentid, p.creationdate asc]);
-
-    #instead of old query above which modifies stackoverflow tables, we union the parents and the children (parents don't have a parentid) 
-    my $q = qq[
-                  select parentid, id, title, body, msg_date from                                                                                                                                                              
-                  (select id as parentid, id, title, body, creationdate as msg_date from posts 
-                    where id in (select id from posts where tags ~ E\'$config{tags}\') --the parents (or questions)                                                        
-                  union select parentid, id, title, body, creationdate as msg_date from posts 
-                    where parentid in (select id from posts where tags ~ E\'$config{tags}\') --the children (answers)                                                   
-                    ) as r 
-                  order by parentid, msg_date asc
-                  ];
-
-#    #lucene is implemented in all kinds of languages, so need complex regexp
-#    my $q = q[
-#                  select parentid, id, title, body, msg_date from                                                                                                                                                              
-#                  (select id as parentid, id, title, body, creationdate as msg_date from posts 
-#                    where id in (select id from posts where tags ~ E'lucene' and (tags ~ E'java' or tags !~ E'net|c#|php|nhibernate|zend|clucene|ruby|c\\\\+\\\\+|pylucene|python|rails')) 
-#                  union select parentid, id, title, body, creationdate as msg_date from posts 
-#                    where parentid in (select id from posts where tags ~ E'lucene' and (tags ~ E'java' or tags !~ E'net|c#|php|nhibernate|zend|clucene|ruby|c\\\\+\\\\+|pylucene|python|rails')) 
-#                    ) as r 
-#                  order by parentid, msg_date asc
-#                  ];
-
-    my $get_du = $dbh_ref->prepare($q);
-
-
-
-    $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
-
-    #Stackoverflow
-    while ( my($tid, $du, $title, $content) = $get_du ->fetchrow_array) {
-
-        if(defined $title) {
-            $content = $title . ' ' . $content;
-        }
-
-
-        print "\n\nprocessing du = $du\n";
-        process($tid, $du, strip_html($content));
-
-    }
-    $get_du->finish;
-}
-#
-#For recodoc -- legacy 
-elsif($config{doc_type} eq 'recodoc') {
-
-    my $get_du = $dbh_ref->prepare(q{select t.url, m.url, m.title, m.text_content from channel_message m, channel_supportthread t where m.sthread_id = t.id and t.channel_id = 2});
-    #and m.url = '199145'}); #for stacktraces
-    #m.url = '1150615'}); #test for generics # and m.url = '1116614'});
-    $get_du->execute or die "Can't get doc units from db ", $dbh_ref->errstr;
-
-    #Stack overflow
-    while ( my($tid, $du, $title, $content) = $get_du ->fetchrow_array) {
-
-        if(defined $title) {
-            $content = $title . ' ' . $content;
-        }
-            #test - print " $old_end, $pos -- prxh_$kind\{$pqn\.$simple\} \n";
-
-
-        print "\n\nprocessing du = $du\n";
-        process($tid, $du, strip_html($content));
-
-    }
-    $get_du->finish;
-}
-#tutorial
-elsif($config{doc_type} eq 'tutorial') {
-
-    my $db_check_repo_ref = $dbh_ref->prepare(q{select tid from clt where tid = ? group by tid});
-    process_dir($config{path}, \%config, $db_check_repo_ref);
-    $db_check_repo_ref->finish;
-}
-else {
-    print STDERR "Invalid doc_type ", $config{doc_type};
-}
-
 #in effect we are doing one giant insert, so we'll just do one commit at the end
-$dbh_ref->commit;
+sub finish{
+	$dbh_ref->commit;
 
-$insert_simple->finish;
-$get_pos->finish;
-$dbh_ref->disconnect;
-
+	$insert_simple->finish;
+	$get_pos->finish;
+	$dbh_ref->disconnect;
+}
+#wierd perl thing, modules usually end in 1 to avoid an error
+1;
 __END__
 
 See README.txt
