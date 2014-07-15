@@ -63,7 +63,7 @@ package html;
 #
 sub strip_html($) {
 
-	my $self = shift;
+	#my $self = shift;
 	my $html = '\!\-\-|\!DOCTYPE|a|abbr|acronym|address|applet|area|b|base|basefont|bdo|big|blockquote|body|br|button|caption|center|cite|col|colgroup|dd|del|dfn|dir|div|dl|dt|em|fieldset|font|form|frame|frameset|head|h[1-6]|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|map|menu|meta|noframes|noscript|object|ol|optgroup|option|p|param|q|s|samp|script|select|small|span|strike|strong|style|sub|sup|table|tbody|td|textarea|tfoot|th|thead|title|tr|tt|u|ul|var|pre|code';
 	my ($content) = @_;
 
@@ -98,7 +98,7 @@ sub strip_html($) {
 
 sub code_snips_to_html($) {
 
-	my $self = shift;
+	#my $self = shift;
 	my ($content) = @_;
 	$content =~ s/$START_CODE/<code>/g;
 	$content =~ s/$END_CODE/<\/code>/g;

@@ -51,7 +51,7 @@ my %ce;
 my $insert_simple;
 #called automatically when use 'module' is called
 sub import {
-	#my $self = shift;
+	my $self = shift;
 	$config_path = shift;
 	$pass = shift;
 	#print "making it to here";

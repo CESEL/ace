@@ -14,16 +14,16 @@ use File::Find::Rule;
 use File::Slurp;
 
 use Config::General;
-push(@INC, '/home/da_bourq/gitHub/ace/src');
+#push(@INC, '/home/da_bourq/gitHub/ace/src');
 use html;
 
-my $config_path = shift;
+my $config_path;
 
 #two passes, find trustued code elements, then reparse to pull out all ces
-my $pass = shift;
+my $pass;
 
 
-#use resolve ($config_path=shift, $pass=shift);
+use resolve ($config_path=shift, $pass=shift);
 if (!defined $pass) {
 	$pass = 'first';
 }
@@ -318,8 +318,9 @@ elsif($config{doc_type} eq 'email') {
 
             print "\n\nprocessing: tid = $tid email = $du\n";
 	    resolve->process($tid, $du, html->strip_html($content));
-        }
+    }
 	resolve->finish;
+	$get_du->finish;
 }
 
 $dbh_ref->disconnect;
