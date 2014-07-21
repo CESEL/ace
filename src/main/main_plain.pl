@@ -53,12 +53,13 @@ elsif($config{doc_type} eq 'plain') {
 
             print "\n\nprocessing: dir or tid = $tid file or du = $du\n";
             my $content = read_file($file);
-	    resolve->process($tid, $du, html->strip_html($content));
+	    resolve::process($tid, $du, html->strip_html($content));
         }
 
 
         last;
 
     }
+    resolve::finish;
 
 }

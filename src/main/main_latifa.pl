@@ -57,9 +57,10 @@ elsif($config{doc_type} eq 'latifa') {
 
 
         print "\n\nprocessing du = $du\n";
-	resolve->process($tid, $du, html->strip_html($content));
+	resolve::process($tid, $du, html->strip_html($content));
 
     }
+    resolve::finish;
     $get_du->finish;
 }
 

@@ -6,6 +6,7 @@ use strict;
 use DBI;
 use Cwd;
 use Regexp::Common; 
+use Lingua::Stem qw(stem);
 
 use IO::File;
 
@@ -13,7 +14,7 @@ use File::Find::Rule;
 use File::Slurp;
 
 use Config::General;
-
+#push(@INC, '/home/da_bourq/gitHub/ace/src');
 use html;
 
 my $config_path;
@@ -49,73 +50,57 @@ use Path::Class;
 
 
 
-sub rm_squiggly{
 
-	my ($start) = $_[1];
-	for (my $i = $start + 1; $i < length($_[0]); $i++){
-		if (substr($_[0], $i, 1) eq '{'){
-			rm_squiggly($_[0], $i);
-		}
-		if (substr($_[0], $i, 1) eq '}'){
-			substr($_[0], $start, $i - $start + 1) = "";
-			last;
-		}	
+sub rrb{
+	my $return = shift;
+	my @parts = @_;
+	while (my $word = shift @parts){
+		next unless $word =~ /\)/;
+		$word =~ s/^.*?\)// while ($word =~/\)/);
+		$return =~ s/ $//;
+		$return .= $word;
 	}
+	return $return;
 }
 
-sub rm_round{
-
-	my ($start) = $_[1];
-	for (my $i = $start + 1; $i < length($_[0]); $i++){
-		if (substr($_[0], $i, 1) eq '('){
-			rm_round($_[0], $i);
-		}
-		if (substr($_[0], $i, 1) eq ')'){
-			substr($_[0], $start, $i - $start + 1) = "";
-			last;
-		}	
+sub rsb{
+	my $return = shift;
+	my @parts = @_;
+	while (my $word = shift @parts){
+		next unless $word =~ /\]/;
+		$word =~ s/^.*?\]// while ($word =~/\]/);
+		$return =~ s/ $//;
+		$return .= $word;
 	}
+	return $return;
 }
-
-sub rm_square{
-
-	my ($start) = $_[1];
-	for (my $i = $start + 1; $i < length($_[0]); $i++){
-		if (substr($_[0], $i, 1) eq '['){
-			rm_square($_[0], $i);
-		}
-		if (substr($_[0], $i, 1) eq ']'){
-			substr($_[0], $start, $i - $start + 1) = "";
-			last;
-		}	
+sub rsqb{
+	my $return = shift;
+	my @parts = @_;
+	while (my $word = shift @parts){
+		next unless $word =~ /\}/;
+		$word =~ s/^.*?\}// while ($word =~/\}/);
+		$return =~ s/ $//;
+		$return .= $word;
 	}
+	return $return;
 }
-
 #removes lines of code, dates, time etc.
 sub clean_body{
 
 	my ($body) = @_;
-	#remove squiggly brackets
-	for (my $i = 0; $i < length($body); $i++){
-		if (substr($body, $i, 1) eq '{'){
-			rm_squiggly($body,$i);
-		}
-	}
+	
 
-	#remove round brackets
-	for (my $i = 0; $i < length($body); $i++){
-		if (substr($body, $i, 1) eq '('){
-			rm_round($body,$i);
-		}
-	}
-
-	#remove square brackts
-	for (my $i = 0; $i < length($body); $i++){
-		if (substr($body, $i, 1) eq '['){
-			rm_square($body,$i);
-		}
-	}
-
+	my @parts = split/\(/i, $body;
+	$body = rrb(@parts);
+	
+	
+	@parts = split/\[/, $body;
+	$body = rsb(@parts);
+	
+	@parts = split/\{/, $body;
+	$body = rsqb(@parts);
+	
 	#remove point concatinated
 	$body =~ s/( \S+? (\.\S+){2,}?  )//gxe;
 		
@@ -147,16 +132,17 @@ sub clean_body{
 	$body =~ s/(\.jar|\.java|\.xml|)//g;
 
 	#remove numbers and punctuation
-	$body =~ s/[\d\$#@~!&*;,?^'=:<>%\+\."\/\(\)\{\}\[\]]+//g;
+	$body =~ s/[\d\$#@~!&*;,?^'=:<>%-\+\."\/\(\)\{\}\[\]]+//g;
 
 	$body =~ tr|-| |;
 
 	#remove <stuff..>
-	$body =~ s/<[^>]*\>//g;
+	$body =~ s/<[^>]*>//g;
 
 
 	$body =~ s/\h+/ /g;
 	
+	$body =~ s/\b..\b//g;	
 
 	return $body;
 							
@@ -196,7 +182,7 @@ sub remove_java{
 	
 	my ($body) = @_;
 	my @body_list = split(' ', $body);
-	my $filename = "files/common_words2.txt";
+	my $filename = "files/common_words3.txt";
 	
 	open(FILE, $filename) or die ("could not open file");
 	my %stop = ();
@@ -206,6 +192,7 @@ sub remove_java{
 		push(@commonWords, $line);
 	}
 	close(FILE);
+	Lingua::Stem::stem_in_place(@commonWords);	
 	%stop = map { lc $_ => 1} @commonWords;
 
 	my (@ok, %seen);
@@ -233,46 +220,53 @@ sub getnGram{
 
 if($config{processing} eq 'summary' and $config{doc_type} eq 'email') {
 	#my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where trust = 0 and kind <> 'variable' and du = '1035654119.30.1388136223004.JavaMail.hudson\@aegis' order by du, pos});
-	my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where simple = 'JobTracker' order by du, pos});
-	my $get_du = $dbh_ref->prepare(q[select thread_id, msg_id, subject, body from email where msg_id = ?]);
-	my $get_email = $dbh_ref->prepare(q[select thread_id, msg_id, subject, body from email limit 100]);
+	#my $get_pos_len = $dbh_ref->prepare(qq{select du, pqn, simple, kind, pos, length(simple) as len from clt where simple = 'JobTracker' order by du, pos});
+	#my $get_du = $dbh_ref->prepare(q[select thread_id, msg_id, subject, body from email where msg_id = ?]);
+	my $get_email = $dbh_ref->prepare(q[select thread_id, msg_id, subject, body from email order by msg_id limit 15000 offset 60000]);
 
 	#my $get_simple = $dbh_ref->prepare(q[select simple from clt where du = '?']);
 
-	$get_pos_len->execute or die;
+	#$get_pos_len->execute or die;
    
-	my $body;
-	my $ngram;
-	my @all_body;
-	my @all_original_body;
-	my $final_body;
+	#my $body;
+	#my $ngram;
+	#my @all_body;
+	#my @all_original_body;
+	#my $final_body;
 
 
 	#while(my ($du, $pqn, $simple, $kind, $pos, $len) = $get_pos_len->fetchrow_array){
 				
+	#my $dir = dir("/home/da_bourq/Desktop/test");
 		$get_email->execute or die "Can't get body from db ", $dbh_ref->errstr;
 		while(my($thread_id, $msg_id, $subject, $body) = $get_email->fetchrow_array){
 			if (defined $subject){
 				$body .= $subject . ' ';
 			}
-			my $original_body = $body;
-			$body = html->strip_html($body);	
-
+			#my $original_body = $body;
+			#
+			print "$msg_id\n"; #strip_html\n";
+			$body = html->strip_html($body);
 			$body = split_words($body);
-
 			$body = clean_body($body);
 
-			#if ($body !~ /$simple/) {
-			#	next;
-			#}
-
+			if(!defined($body) or !(length($body))){
+				next;
+			}
 			$body = remove_stop_words($body);
 	
+			if(!defined($body) or !(length($body))){
+				next;
+			}
+			my @body2 = split / /, $body;
+			Lingua::Stem::stem_in_place(@body2);
+			$body = join (' ', @body2);
 			$body = remove_java($body);
 		
-			#push(@all_original_body, $original_body);
-			#push(@all_body, $body);
-			my $dir = dir("/home/da_bourq/Desktop/test");
+			if(!defined($body) or !(length($body))){
+				next;
+			}
+			my $dir = dir("/home/da_bourq/mallet-2.0.7/ant");
 			my $filename = $dir -> file("$msg_id".".txt");
 		
 			open (my $fh, '>', $filename);
@@ -280,23 +274,15 @@ if($config{processing} eq 'summary' and $config{doc_type} eq 'email') {
 			close $fh;
 
 
-		#$ngram = getnGram($more_body);	
+		}
+	$get_email->finish;		
 
-		#print "ORIGINAL:\n$body\n\nFIRSTPASS:\n$clean_body\n\nSECONDPASS\n$cleaner_body\n\nTHIRDPASS\n$more_body\n\n";
-	
-		
-
-		#if ($pqn !~ /.*\..*/){
-		#	print "pqn: ".$pqn."\n"."simple: ".$simple."\n"."we get: ".substr($sc, $pos, $len)."\n\n";
-			
-		#}
-	}
-	
 	#$final_body = join ' ', @all_body;
 	#my $final_original_body = join ' ', @all_original_body;
 	#print $final_original_body;
 	#$ngram = getnGram($final_body);
 	#print $ngram;
+	
 
 }
 
@@ -315,8 +301,10 @@ elsif($config{doc_type} eq 'email') {
 	    $content .= $subject . ' ';
 
             print "\n\nprocessing: tid = $tid email = $du\n";
-	    resolve->process($tid, $du, html->strip_html($content));
-        }
-	resolve->finish;
+	    resolve::process($tid, $du, html->strip_html($content));
+    }
+    	resolve::finish;
+	$get_du->finish;
 }
 
+$dbh_ref->disconnect;

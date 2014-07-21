@@ -20,8 +20,11 @@ More details in Rigby and Robillard ICSE 2013.
 * See the example config file
 ** src/example.conf
 
+*a custom main_'type'.pl file may need to be written. see main_example. main files are in main directory to prevent cluttering but must be moved and run from the /src directory to work
+**src/main/main_example.conf
+
 * resolve.sh will run all the appropriate perl and sql scripts 
-** <pre> ./resolve.sh db_name config_file 2> project_name/project.error | tee project_name/project.out </pre>
+** <pre> ./resolve.sh config_file 2> project_name/project.error | tee project_name/project.out </pre>
 
 * certain two camel words are are not valid classes and are project specific. (e.g., HttpClient is both a class and a project)
 ** Too fix these terms add them to src/project_specific/<project_name>.sql 
