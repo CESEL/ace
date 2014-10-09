@@ -84,25 +84,9 @@ while ( my($tid, $type, $type_trust, $simple, $simple_trust, $kind) = $get_ref->
 $dbh_ref->commit or warn $dbh_ref->errstr;
 
 $check->finish;
-
-$dbh_ref->do(q{vacuum clt_temp});
-$dbh_ref->commit;
-$dbh_ref->do(q{analyze clt_temp});
-$dbh_ref->commit;
-
-#update clt
-$dbh_ref->do(q{update clt set pqn = a.pqn, kind = a.kind, reason = a.reason, trust = 0 from clt_temp as a where clt.tid = a.tid and clt.simple = a.simple;});
-$dbh_ref->commit;
-
-$dbh_ref->do(q{vacuum clt});
-$dbh_ref->commit;
-$dbh_ref->do(q{analyze clt});
-$dbh_ref->commit;
-
 $insert->finish;
 $get_ref->finish;
 $dbh_ref->disconnect;
 
-__END__
 
 
