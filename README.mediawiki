@@ -10,27 +10,27 @@ More details in Rigby and Robillard ICSE 2013.
 
 ==Required Libraries==
 
-* sudo apt-get install postgresql libConfig-General-perl libIO-File-perl libRegexp-Common-perl libdbd-pg-perl
+* sudo apt-get install postgresql libConfig-General-perl libRegexp-Common-perl libdbd-pg-perl libFile-Slurp-perl libfile-find-rule-perl libio-all-perl
 
 ==Run==
-
-* As Input ACE takes the stackoverflow db in postgres format (it can handle any plaintext file, but currently there is no way to feed it raw plaintext documents)
-** to get the posts table you'll need to look to use src/stackoverflow_postgres/
 
 * See the example config file
 ** src/example.conf
 
-*a custom main_'type'.pl file may need to be written. see main_example. main files are in main directory to prevent cluttering but must be moved and run from the /src directory to work
+*a custom main_'type'.pl file may need to be written, for example, main_stackoverflow.pl. see main_example. main files are in main directory to prevent cluttering but must be moved and run from the /src directory to work
 **src/main/main_example.conf
 
 * resolve.sh will run all the appropriate perl and sql scripts 
-** <pre> ./resolve.sh config_file 2> project_name/project.error | tee project_name/project.out </pre>
+** <pre> ./resolve.sh db_name config_file main_file 2> project_name/project.error | tee project_name/project.out </pre>
+
 
 * certain two camel words are are not valid classes and are project specific. (e.g., HttpClient is both a class and a project)
 ** Too fix these terms add them to src/project_specific/<project_name>.sql 
 
 * if you're going to run more than one project/tag through ACE in the same db,
 ** you'll need to modify: src/rename_tables.sql 
+
+
 
 ==The Output==
 *Just dump the clt table (Code Like Term) to a file
