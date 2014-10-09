@@ -1,6 +1,6 @@
-#just replace $1 with the project you're parsing and away you go
+#just replace $1 with the project you're parsing, $2 with the location of the config file and $3 with your main/main_'name'.pl and away you go
 
-echo "db = $1 and Config = $2"
+echo "$3 db = $1 and Config = $2"
 
 date
 
@@ -11,8 +11,8 @@ psql $1 -f create.sql
 psql $1 -f drop_indexes.sql
 
 #The first pass, getting the valid code elements
-echo "./resolve.pl $2 first > /tmp/$1_resolve1.out"
-./resolve.pl $2 first > /tmp/$1_resolve1.out
+echo "./$3 $2 first > /tmp/$1_resolve1.out"
+./$3 $2 first > /tmp/$1_resolve1.out
 date
 
 #should make some indexes for variable resolution
@@ -39,8 +39,8 @@ psql $1 -f dict_ce.sql
 date
 
 #find the ambiguous code elements that match a term in our collection-wide dictionary
-echo "./resolve.pl $2 second > /tmp/$1_resolve2.out"
-./resolve.pl $2 second > /tmp/$1_resolve2.out
+echo "./$3 $2 second > /tmp/$1_resolve2.out"
+./$3 $2 second > /tmp/$1_resolve2.out
 date
 
 echo "save original trust sql: update clt set trust_original = trust, kind_original = kind where trust = 7;"
@@ -60,6 +60,7 @@ date
 echo "./du_insert.pl $2"
 psql $1 -f create_clt_temp_du.sql
 ./du_insert.pl $2
+psql $1 -f after_du_insert.sql
 date
 
 #Attach the post's date to each code element
@@ -74,8 +75,9 @@ date
 psql $1 -f create_clt_temp_tid.sql
 echo "./thread.pl $2"
 ./thread_insert.pl $2
-#./thread_freq.pl $2
+psql $1 -f after_thread_insert.sql
 date
+
 
 echo "cleans up the db"
 psql $1 -f final.sql

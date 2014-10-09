@@ -55,23 +55,23 @@ my $is_new = 0;
 while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $get_ref->fetchrow_array) {
 
     # is the type already been added to clt_temp?
-    $check->execute($du, $type);
+    $check->execute($du, $type) or die $dbh_ref->errstr;
     $is_new = $check->rows;
 
     #print "$du, $type, $type_trust, $simple, $simple_trust, $abs_pos\n\n";
 
     if (!defined $prev[0] or $prev[0] ne $du or $prev[1] ne $simple) {
         #update method
-        $insert->execute($type, $kind, "member class defined: $simple_trust", $du, $simple);
+        $insert->execute($type, $kind, "member class defined: $simple_trust", $du, $simple) or die $dbh_ref->errstr;
 
         #update class as it's being used
         if ($is_new == 0 and $type_trust > 0) {
-            $insert->execute($type, 'type', 'local context', $du, $type);
+            $insert->execute($type, 'type', 'local context', $du, $type) or die $dbh_ref->errstr;
         }
 
     }
     elsif ($is_new == 0 and $type_trust > 0) {
-        $insert->execute($type, 'type', 'local context', $du, $type);
+        $insert->execute($type, 'type', 'local context', $du, $type) or die $dbh_ref->errstr;
     }
 
     @prev = ($du, $simple);
@@ -81,19 +81,6 @@ while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $
 $dbh_ref->commit;
 
 $check->finish;
-
-$dbh_ref->do(q{vacuum clt_temp});
-$dbh_ref->do(q{analyze clt_temp});
-$dbh_ref->commit;
-
-#update clt
-$dbh_ref->do(q{update clt set pqn = a.pqn, kind = a.kind, reason = a.reason, trust = 0 from clt_tmp as a where clt.du = a.du and clt.simple = a.simple;});
-$dbh_ref->commit;
-
-$dbh_ref->do(q{vacuum clt});
-$dbh_ref->do(q{analyze clt});
-$dbh_ref->commit;
-
 $insert->finish;
 $get_ref->finish;
 $dbh_ref->disconnect;
