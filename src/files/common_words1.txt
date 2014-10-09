@@ -1,4 +1,0 @@
-hadoop
-org
-apache
-main
