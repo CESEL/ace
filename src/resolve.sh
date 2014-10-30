@@ -11,8 +11,11 @@ psql $1 -f create.sql
 psql $1 -f drop_indexes.sql
 
 #The first pass, getting the valid code elements
-echo "./$3 $2 first > /tmp/$1_resolve1.out"
-./$3 $2 first > /tmp/$1_resolve1.out
+#./$3 $2 first > /tmp/$1_resolve1.out
+echo "./$3 $2 first > /dev/null"
+./$3 $2 first > /dev/null
+
+psql $1 -f backup_clt.sql
 date
 
 #should make some indexes for variable resolution
@@ -39,8 +42,11 @@ psql $1 -f dict_ce.sql
 date
 
 #find the ambiguous code elements that match a term in our collection-wide dictionary
-echo "./$3 $2 second > /tmp/$1_resolve2.out"
-./$3 $2 second > /tmp/$1_resolve2.out
+#./$3 $2 second > /tmp/$1_resolve2.out
+echo "./$3 $2 second > /dev/null"
+./$3 $2 second > /dev/null
+
+psql $1 -f backup_clt.sql
 date
 
 echo "save original trust sql: update clt set trust_original = trust, kind_original = kind where trust = 7;"
