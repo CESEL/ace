@@ -50,31 +50,24 @@ $get_ref->execute or die $dbh_ref->errstr;
 my $check = $dbh_ref->prepare(q{select du, simple from clt_temp where du = ? and simple = ?});
 my $insert = $dbh_ref->prepare(q{insert into clt_temp (pqn, kind, reason, trust, du, simple) values (?,?,?,0,?,?)}); 
 
-my @prev;
-my $is_new = 0;
 while ( my($du, $type, $type_trust, $simple, $simple_trust, $kind, $abs_pos) = $get_ref->fetchrow_array) {
 
-    # is the type already been added to clt_temp?
-    $check->execute($du, $type) or die $dbh_ref->errstr;
-    $is_new = $check->rows;
 
-    #print "$du, $type, $type_trust, $simple, $simple_trust, $abs_pos\n\n";
-
-    if (!defined $prev[0] or $prev[0] ne $du or $prev[1] ne $simple) {
+    #is the simple already in there?
+    $check->execute($du, $simple) or die $dbh_ref->errstr;
+	if ($check->rows == 0) {
         #update method
         $insert->execute($type, $kind, "member class defined: $simple_trust", $du, $simple) or die $dbh_ref->errstr;
+	}
 
-        #update class as it's being used
-        if ($is_new == 0 and $type_trust > 0) {
-            $insert->execute($type, 'type', 'local context', $du, $type) or die $dbh_ref->errstr;
-        }
-
-    }
-    elsif ($is_new == 0 and $type_trust > 0) {
-        $insert->execute($type, 'type', 'local context', $du, $type) or die $dbh_ref->errstr;
-    }
-
-    @prev = ($du, $simple);
+	# is the type already valid?
+	if ($type_trust > 0) {
+		# no? check if it's already been inserted for later update?
+    	$check->execute($du, $type) or die $dbh_ref->errstr;
+		if ($check->rows == 0) {
+       		$insert->execute($type, 'type', 'local context', $du, $type) or die $dbh_ref->errstr;
+    	}
+	}
 
 }
 
