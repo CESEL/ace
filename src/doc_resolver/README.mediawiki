@@ -1,0 +1,9 @@
+==Uses the docs as an index, postprocessing==
+
+As the number of posts increases the frequency of erroneous and program specific code elements get included in the CE index. This parser keeps only those that are in the docs.
+
+# Run Mark's API doc extractor to get the list of valid code elements
+# Make sure there are indexes on clt, you can run ../create_index.sql
+# run docs_clt.sql
+
+
