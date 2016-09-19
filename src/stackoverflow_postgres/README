@@ -1,6 +1,6 @@
 ==dump the post table into a postgres db==
 
-#download the latest dump torrent http://meta.stackoverflow.com/questions/213670/is-there-a-problem-with-the-clearbits-data-dump 
+#download the latest dump torrent https://archive.org/details/stackexchange 
 
 #You'll need 7z to unzip the files:
 ## sudo apt-get install p7zip-full
