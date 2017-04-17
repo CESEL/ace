@@ -3,6 +3,9 @@
 use warnings;
 use strict;
 
+use Text::Unidecode qw(unidecode);
+use HTML::Entities qw(decode_entities);
+
 use DBI;
 use Config::General;
 
@@ -32,10 +35,13 @@ while (my $line = <>) {
 		elsif ($line =~ m/\G( . )/xgcs) {}; #{print "ILLEGAL CHAR: $1\n"};
 	}
 
+	#get rid of non-ascii and html junk!
+	my $cleaned_body = unidecode(decode_entities($fields{Body}));
+
 	if(defined $fields{Id}) { 
 		$insert->execute($fields{Id},
 			$fields{PostTypeId}, $fields{ParentId}, $fields{AcceptedAnserId},
-			$fields{CreationDate}, $fields{Score}, $fields{ViewCount}, $fields{Body},
+			$fields{CreationDate}, $fields{Score}, $fields{ViewCount}, $cleaned_body,
 			$fields{OwnerUserId}, $fields{LastEditorUserId},
 			$fields{LastEditorDisplayName}, $fields{LastEditDate},
 			$fields{LastActivityDate}, $fields{CommunityOwnedDate}, $fields{ClosedDate},

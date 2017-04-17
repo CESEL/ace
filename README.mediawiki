@@ -10,18 +10,19 @@ More details in Rigby and Robillard ICSE 2013.
 
 ==Required Libraries==
 
-* sudo apt-get install postgresql libConfig-General-perl libRegexp-Common-perl libdbd-pg-perl libFile-Slurp-perl libfile-find-rule-perl libio-all-perl
+* sudo apt-get install postgresql libconfig-general-perl libregexp-common-perl libdbd-pg-perl libfile-slurp-perl libfile-find-rule-perl libio-all-perl
 
 ==Run==
 
 * See the example config file
 ** src/example.conf
 
-*a custom main_'type'.pl file may need to be written, for example, main_stackoverflow.pl. see main_example. main files are in main directory to prevent cluttering but must be moved and run from the /src directory to work
+*There are a number of main main_'type'.pl, for example, main_stackoverflow.pl. Main files are for different document types and are in main directory to prevent cluttering but must be moved and run from the /src directory to work
 **src/main/main_example.conf
 
 * resolve.sh will run all the appropriate perl and sql scripts 
 ** <pre> ./resolve.sh db_name config_file main_file 2> project_name/project.error | tee project_name/project.out </pre>
+** <pre> ./resolve.sh so_2017_march android/android.conf main/main_stackoverflow.pl 2> project_name/project.error | tee project_name/project.out </pre>
 
 
 * certain two camel words are are not valid classes and are project specific. (e.g., HttpClient is both a class and a project)

@@ -13,9 +13,7 @@
 # create the table
 ## psql db_name -f create_post.sql
 
-# cat so.xml | ./stackoverflow_postgres.pl config
+# sudo apt-get install libtext-unidecode-perl 
 
-# You can then strip out the html garbage using Sham's Phpspcldata-normal.php
-## The db values etc are hardcoded in the script
+# tac Posts.xml | ./stackoverflow_postgres.pl config
 
-#so_xml.pl was a failed attempt
