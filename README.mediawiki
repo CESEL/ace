@@ -67,7 +67,7 @@ Here are some scripts to do manual validation:
 
 == Further NLP parsing (experimental) ==
 
-* try: main/main_nlp_stackoverflow.pl
+* try: ./main/main_nlp_stackoverflow.pl android/android.conf
 *Note: Terms that remain ambiguous will not be highlighted, even if the term is identified later on in the document. This is to avoid terms that are very common. For example if url.get() is identified in a document, we could go back and highlight every instance of the word 'get', which would be silly. 
 
 ==What do the trust values mean?==
