@@ -91,3 +91,4 @@ date
 
 echo "you may want to run project specific quiries to include two camel classes, see src/project_specific/<project-name.sql>"
 
+echo "you'll need to recreate the index psql <db_name -f create_index.sql"

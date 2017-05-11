@@ -22,7 +22,7 @@ More details in Rigby and Robillard ICSE 2013.
 
 * resolve.sh will run all the appropriate perl and sql scripts 
 ** <pre> ./resolve.sh db_name config_file main_file 2> project_name/project.error | tee project_name/project.out </pre>
-** <pre> ./resolve.sh so_2017_march android/android.conf main/main_stackoverflow.pl 2> project_name/project.error | tee project_name/project.out </pre>
+** <pre> ./resolve.sh so_2017_march android/android.conf main/main_stackoverflow.pl 2> android/android.error | tee andriod/android.out </pre>
 
 
 * certain two camel words are are not valid classes and are project specific. (e.g., HttpClient is both a class and a project)
@@ -67,9 +67,7 @@ Here are some scripts to do manual validation:
 
 == Further NLP parsing (experimental) ==
 
-*update the conf file adding the following: processing=nlp
-**if processing is not present in the config files, normal code element extraction will occur
-** ./resolve.pl <config file> first 
+* try: main/main_nlp_stackoverflow.pl
 *Note: Terms that remain ambiguous will not be highlighted, even if the term is identified later on in the document. This is to avoid terms that are very common. For example if url.get() is identified in a document, we could go back and highlight every instance of the word 'get', which would be silly. 
 
 ==What do the trust values mean?==
