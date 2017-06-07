@@ -51,4 +51,11 @@ sub code_snips_to_html($) {
 
 }
 
+sub remove_code_snips($) {
+	my $self = shift;
+	my ($content) = @_;
+	$content =~ s/$START_CODE .*? $END_CODE/ /xmsg;
+	return $content;
+}
+
 1;
