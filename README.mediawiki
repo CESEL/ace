@@ -12,6 +12,7 @@ More details in Rigby and Robillard ICSE 2013.
 
 * sudo apt-get install postgresql libconfig-general-perl libregexp-common-perl libdbd-pg-perl libfile-slurp-perl libfile-find-rule-perl libio-all-perl
 
+* Postgres has ridculously low mem settings. Make sure to tune it for DW using http://pgtune.leopard.in.ua/
 ==Run==
 
 * See the example config file
